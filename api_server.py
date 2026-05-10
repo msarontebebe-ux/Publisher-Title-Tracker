@@ -299,6 +299,28 @@ def api_index():
     })
 
 
+@app.route('/api/cover/<path:isbn>')
+def get_cover(isbn):
+    """
+    Proxy Springer book cover images.
+    Springer's CDN blocks direct browser requests (hotlinking), so the
+    browser calls this endpoint instead and the server fetches it server-side.
+    """
+    import requests as req_lib
+    from flask import Response
+    url = f'https://media.springernature.com/w306/springer-static/cover/book/{isbn}.jpg'
+    try:
+        r = req_lib.get(url, timeout=5, headers={
+            'User-Agent': 'Mozilla/5.0',
+            'Referer': 'https://link.springer.com'
+        })
+        if r.status_code == 200 and 'image' in r.headers.get('content-type', ''):
+            return Response(r.content, mimetype=r.headers['content-type'])
+    except Exception:
+        pass
+    return '', 404
+
+
 @app.route('/health')
 def health():
     if _db_available():

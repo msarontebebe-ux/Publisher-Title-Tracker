@@ -130,26 +130,95 @@
         .results { padding: 30px; }
 
         .publication {
-            background: #f8f9fa;
-            border-left: 4px solid #667eea;
+            display: flex;
+            gap: 20px;
+            background: white;
+            border: 1px solid #e9ecef;
             padding: 20px;
             margin-bottom: 15px;
-            border-radius: 8px;
-            transition: all 0.3s;
+            border-radius: 10px;
+            transition: all 0.25s;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
         }
         .publication:hover {
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            transform: translateX(5px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
         }
-        .pub-title { font-size: 1.2em; font-weight: 600; color: #212529; margin-bottom: 10px; }
-        .pub-meta  { display: flex; flex-wrap: wrap; gap: 15px; font-size: 0.9em; color: #6c757d; margin-bottom: 10px; }
-        .meta-item { display: flex; align-items: center; gap: 5px; }
-        .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.8em; font-weight: 600; }
-        .badge-series { background: #667eea; color: white; }
-        .badge-year   { background: #28a745; color: white; }
-        .badge-event  { background: #fd7e14; color: white; }
-        .pub-authors  { color: #495057; margin-bottom: 8px; font-style: italic; }
-        .pub-link     { color: #667eea; text-decoration: none; font-weight: 600; }
+
+        /* Thumbnail */
+        .pub-cover {
+            flex-shrink: 0;
+            width: 90px;
+        }
+        .pub-cover img {
+            width: 90px;
+            height: 126px;
+            object-fit: cover;
+            border-radius: 4px;
+            box-shadow: 2px 4px 10px rgba(0,0,0,0.2);
+            display: block;
+        }
+        .cover-placeholder {
+            width: 90px;
+            height: 126px;
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7em;
+            font-weight: 700;
+            color: white;
+            text-align: center;
+            padding: 6px;
+            box-shadow: 2px 4px 10px rgba(0,0,0,0.2);
+            line-height: 1.3;
+        }
+
+        /* Content */
+        .pub-content { flex: 1; min-width: 0; }
+        .pub-title {
+            font-size: 1.1em;
+            font-weight: 700;
+            color: #212529;
+            margin-bottom: 6px;
+            line-height: 1.4;
+        }
+        .pub-authors {
+            color: #6c757d;
+            margin-bottom: 10px;
+            font-style: italic;
+            font-size: 0.9em;
+        }
+
+        /* Badge row */
+        .pub-badges { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; align-items: center; }
+        .badge-group { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+        .badge-label { font-size: 0.7em; color: #6c757d; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+        .badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+        .badge-series { background: #eef0ff; color: #4c5aef; border: 1px solid #c5cbfa; }
+        .badge-year   { background: #e6f9ed; color: #1a7f3c; border: 1px solid #a3e0b8; }
+        .badge-event  { background: #fff4e6; color: #c05c00; border: 1px solid #ffc97a; }
+
+        /* Conference info row */
+        .pub-event {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            font-size: 0.85em;
+            color: #495057;
+            margin-bottom: 8px;
+        }
+        .pub-event-item { display: flex; align-items: center; gap: 5px; }
+        .pub-event-icon { font-size: 1em; }
+
+        .pub-link     { color: #667eea; text-decoration: none; font-size: 0.85em; font-weight: 600; }
         .pub-link:hover { text-decoration: underline; }
 
         /* ── Analytics tab ── */
@@ -483,31 +552,94 @@ async function loadRecent() {
     }
 }
 
+// Series colour map for cover placeholders
+const SERIES_COLORS = {
+    'lecture notes in computer science': '#1a6eb5',
+    'lecture notes in artificial intelligence': '#6f42c1',
+    'lecture notes in bioinformatics': '#20a884',
+    'communications in computer and information science': '#e05d1a',
+    'ifip advances in information and communication technology': '#c0392b',
+    'lecture notes in electrical engineering': '#2980b9',
+    'lecture notes in networks and systems': '#16a085',
+    'advances in intelligent systems and computing': '#8e44ad',
+};
+function seriesColor(name) {
+    return SERIES_COLORS[(name || '').toLowerCase()] || '#667eea';
+}
+function seriesAbbr(name) {
+    if (!name) return '?';
+    const map = {
+        'lecture notes in computer science': 'LNCS',
+        'lecture notes in artificial intelligence': 'LNAI',
+        'lecture notes in bioinformatics': 'LNBI',
+        'communications in computer and information science': 'CCIS',
+        'ifip advances in information and communication technology': 'IFIP\nAICT',
+        'lecture notes in electrical engineering': 'LNEE',
+        'lecture notes in networks and systems': 'LNNS',
+        'advances in intelligent systems and computing': 'AISC',
+    };
+    return map[(name || '').toLowerCase()] || name.slice(0, 4).toUpperCase();
+}
+
 function renderPublications(pubs, count) {
     const el = document.getElementById('results');
     if (!pubs || !pubs.length) {
         el.innerHTML = '<div class="empty">No publications found. Try different search criteria.</div>';
         return;
     }
-    let html = `<h2 style="margin-bottom:20px">Found ${count} publication(s)</h2>`;
+    let html = `<p style="color:#6c757d;margin-bottom:20px;font-size:0.95em">Found <strong>${count}</strong> publication(s)</p>`;
     pubs.forEach(pub => {
         const authors = Array.isArray(pub.authors)
             ? pub.authors.map(a => a.name || a).join(', ')
-            : pub.authors || 'Unknown';
-        const eventBadge = pub.event_date_start
-            ? `<span class="badge badge-event">${pub.event_date_start}</span>` : '';
+            : pub.authors || '';
+
+        // Springer book DOIs are always 10.1007/{ISBN-with-dashes}
+        // Extract the ISBN from the DOI — more reliable than the raw isbn field
+        // which CrossRef returns without dashes (e.g. 9783319075921 vs 978-3-319-07593-8)
+        const isbnFromDoi = pub.doi ? pub.doi.replace(/^10\.\d{4}\//, '') : '';
+        const coverIsbn   = isbnFromDoi.startsWith('978') ? isbnFromDoi : '';
+        const color = seriesColor(pub.series);
+        const abbr  = seriesAbbr(pub.series).replace('\n', '<br>');
+        const placeholder = `<div class='cover-placeholder' style='background:${color}'>${abbr}<br><span style='font-size:0.85em;opacity:0.8;margin-top:4px'>Springer</span></div>`;
+        const coverHtml = coverIsbn
+            ? `<img src="/api/cover/${coverIsbn}" alt="cover" onerror="this.outerHTML=\`${placeholder}\`">`
+            : placeholder;
+
+        // Badges — each has a small label above so users know what they mean
+        const seriesBadge = `
+            <div class="badge-group">
+                <span class="badge-label">Series</span>
+                <span class="badge badge-series">${pub.series || 'Unknown'}</span>
+            </div>`;
+        const yearBadge = pub.year ? `
+            <div class="badge-group">
+                <span class="badge-label">Published</span>
+                <span class="badge badge-year">${pub.year}</span>
+            </div>` : '';
+        const eventDateBadge = pub.event_date_start ? `
+            <div class="badge-group">
+                <span class="badge-label">Conference Date</span>
+                <span class="badge badge-event">${pub.event_date_start}${pub.event_date_end ? ' → ' + pub.event_date_end : ''}</span>
+            </div>` : '';
+
+        // Conference name + location row
+        const eventRow = (pub.event_name || pub.event_location) ? `
+            <div class="pub-event">
+                ${pub.event_name     ? `<span class="pub-event-item"><span class="pub-event-icon">🎓</span>${pub.event_name}</span>` : ''}
+                ${pub.event_location ? `<span class="pub-event-item"><span class="pub-event-icon">📍</span>${pub.event_location}</span>` : ''}
+                ${pub.volume         ? `<span class="pub-event-item"><span class="pub-event-icon">📖</span>Vol. ${pub.volume}</span>` : ''}
+            </div>` : '';
+
         html += `
             <div class="publication">
-                <div class="pub-title">${pub.title}</div>
-                <div class="pub-authors">${authors}</div>
-                <div class="pub-meta">
-                    <div class="meta-item"><span class="badge badge-series">${pub.series || 'Unknown'}</span></div>
-                    <div class="meta-item"><span class="badge badge-year">${pub.year || 'N/A'}</span></div>
-                    ${eventBadge}
-                    ${pub.volume ? `<span>Vol. ${pub.volume}</span>` : ''}
-                    ${pub.pages  ? `<span>pp. ${pub.pages}</span>`  : ''}
+                <div class="pub-cover">${coverHtml}</div>
+                <div class="pub-content">
+                    <div class="pub-title">${pub.title}</div>
+                    ${authors ? `<div class="pub-authors">Editors: ${authors}</div>` : ''}
+                    <div class="pub-badges">${seriesBadge}${yearBadge}${eventDateBadge}</div>
+                    ${eventRow}
+                    ${pub.doi ? `<a href="https://doi.org/${pub.doi}" target="_blank" class="pub-link">&#128279; doi.org/${pub.doi}</a>` : ''}
                 </div>
-                ${pub.doi ? `<a href="https://doi.org/${pub.doi}" target="_blank" class="pub-link">${pub.doi}</a>` : ''}
             </div>`;
     });
     el.innerHTML = html;
