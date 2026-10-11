@@ -69,13 +69,13 @@ class PipelineConfig:
     
     @property
     def email(self) -> str:
-        """Get email for API polite pool."""
-        return self.config.get('email', 'research@example.com')
+        """Get email for API polite pool (lives under crossref_api in config.json)."""
+        return self.config.get('crossref_api', {}).get('email', 'research@example.com')
     
     @property
     def delay(self) -> float:
-        """Get delay between API requests."""
-        return self.config.get('delay_seconds', 1.0)
+        """Get delay between API requests (lives under crossref_api in config.json)."""
+        return self.config.get('crossref_api', {}).get('delay', 1.0)
     
     def get_series_info(self, abbreviation: str) -> Optional[Dict[str, Any]]:
         """Get full series information."""
@@ -143,9 +143,12 @@ class ScrapeStage(PipelineStage):
         super().__init__("scrape")
     
     def _run(self, series: str, year_start: int, year_end: Optional[int] = None,
-             max_results: int = 10000, email: str = None, delay: float = 1.0):
+             max_results: int = 10000, email: str = None, delay: float = 1.0,
+             run_type: str = 'full'):
         """Run the scraping process."""
-        from main_crossref import load_config, scrape_series
+        from main_crossref import load_config, scrape_single_series
+        from crossref_scraper import CrossRefScraper
+        from storage import DataLakeStorageHandler
         
         config = load_config()
         series_info = next((s for s in config['springer_series'] 
@@ -157,14 +160,24 @@ class ScrapeStage(PipelineStage):
         self.logger.info(f"Scraping {series} ({series_info['name']})")
         self.logger.info(f"Year range: {year_start}-{year_end or 'present'}")
         
-        # Call the scraping function
-        results = scrape_series(
-            series_info=series_info,
+        # scrape_single_series expects a scraper client and a storage handler;
+        # it performs the Bronze/Silver/Gold writes and run logging itself.
+        scraper = CrossRefScraper(
+            email=email or self.config.email,
+            delay=delay
+        )
+        storage = DataLakeStorageHandler(
+            base_dir=config.get('output', {}).get('directory', 'data')
+        )
+        
+        results = scrape_single_series(
+            series_config=series_info,
+            scraper=scraper,
+            storage=storage,
             year_start=year_start,
             year_end=year_end,
             max_results=max_results,
-            email=email or config.get('email', 'research@example.com'),
-            delay=delay
+            run_type=run_type
         )
         
         self.metrics['records_fetched'] = len(results) if results else 0
@@ -182,20 +195,31 @@ class QualityCheckStage(PipelineStage):
         from gold_layer import compute_quality_metrics
         from database_config import DatabaseConfig
         
+        if not DatabaseConfig.is_cloud_configured():
+            self.logger.info("No cloud DB configured — skipping quality check (file-only mode)")
+            return
+        
         session = DatabaseConfig.get_session()
         try:
             self.logger.info(f"Computing quality metrics for {series or 'all series'}")
             compute_quality_metrics(session, series_filter=series)
             session.commit()
             
-            # Fetch metrics
+            # Fetch metrics — bound parameters, never string interpolation
             from sqlalchemy import text
-            query = "SELECT * FROM quality_metrics"
             if series:
-                query += f" WHERE series = '{series}'"
-            query += " ORDER BY validated_at DESC LIMIT 1"
+                result = session.execute(
+                    text("SELECT * FROM quality_metrics "
+                         "WHERE series = :series "
+                         "ORDER BY validated_at DESC LIMIT 1"),
+                    {'series': series}
+                ).fetchone()
+            else:
+                result = session.execute(
+                    text("SELECT * FROM quality_metrics "
+                         "ORDER BY validated_at DESC LIMIT 1")
+                ).fetchone()
             
-            result = session.execute(text(query)).fetchone()
             if result:
                 self.metrics['doi_coverage'] = float(result.doi_coverage_pct or 0)
                 self.metrics['event_date_coverage'] = float(result.event_date_coverage_pct or 0)
@@ -214,6 +238,11 @@ class GoldLayerStage(PipelineStage):
     def _run(self, series: Optional[str] = None):
         """Refresh gold layer tables."""
         from gold_layer import refresh_gold
+        from database_config import DatabaseConfig
+        
+        if not DatabaseConfig.is_cloud_configured():
+            self.logger.info("No cloud DB configured — skipping gold refresh (file-only mode)")
+            return
         
         self.logger.info(f"Refreshing gold layer for {series or 'all series'}")
         refresh_gold(series_filter=series)
@@ -231,9 +260,13 @@ class PipelineOrchestrator:
     
     def run_pipeline(self, series_list: List[str], year_start: int, 
                     year_end: Optional[int] = None, max_results: int = 10000,
-                    skip_scrape: bool = False) -> bool:
+                    skip_scrape: bool = False, run_type: str = 'full') -> bool:
         """
         Run the complete pipeline for specified series.
+        
+        Args:
+            run_type: 'full' or 'incremental' — recorded in pipeline_runs
+                      so the table reflects how each run was invoked.
         
         Returns True if all stages succeeded.
         """
@@ -241,6 +274,7 @@ class PipelineOrchestrator:
         self.logger.info(f"Pipeline Execution Started | ID: {self.pipeline_id}")
         self.logger.info(f"Series: {', '.join(series_list)}")
         self.logger.info(f"Year range: {year_start}-{year_end or 'present'}")
+        self.logger.info(f"Run type: {run_type}")
         self.logger.info("=" * 70)
         
         overall_success = True
@@ -251,6 +285,12 @@ class PipelineOrchestrator:
             self.logger.info(f"Processing series: {series}")
             self.logger.info(f"{'='*70}")
             
+            # Gold/quality tables store the FULL series name (e.g. 'Lecture Notes
+            # in Computer Science'), not the abbreviation — resolve it once here
+            # so those stages filter on values that actually exist in the DB.
+            series_info = self.config.get_series_info(series)
+            series_full_name = series_info['name'] if series_info else series
+            
             # Stage 1: Scrape
             if not skip_scrape:
                 scrape_stage = ScrapeStage()
@@ -260,7 +300,8 @@ class PipelineOrchestrator:
                     year_end=year_end,
                     max_results=max_results,
                     email=self.config.email,
-                    delay=self.config.delay
+                    delay=self.config.delay,
+                    run_type=run_type
                 ):
                     overall_success = False
                     self.logger.error(f"Scraping failed for {series}, skipping remaining stages")
@@ -273,14 +314,14 @@ class PipelineOrchestrator:
             
             # Stage 2: Gold Layer (includes silver upsert via main_crossref.py)
             gold_stage = GoldLayerStage()
-            if not gold_stage.execute(series=series):
+            if not gold_stage.execute(series=series_full_name):
                 overall_success = False
                 self.logger.warning(f"Gold layer computation failed for {series}")
             self.stages.append(gold_stage)
             
             # Stage 3: Quality Check
             quality_stage = QualityCheckStage()
-            if not quality_stage.execute(series=series):
+            if not quality_stage.execute(series=series_full_name):
                 overall_success = False
                 self.logger.warning(f"Quality check failed for {series}")
             self.stages.append(quality_stage)
@@ -417,7 +458,8 @@ Examples:
         year_start=year_start,
         year_end=year_end,
         max_results=args.max_results,
-        skip_scrape=args.skip_scrape
+        skip_scrape=args.skip_scrape,
+        run_type='incremental' if args.incremental else 'full'
     )
     
     # Exit with appropriate code

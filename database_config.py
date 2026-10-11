@@ -75,6 +75,20 @@ class DatabaseConfig:
             raise ValueError(f'Unsupported DB_TYPE: {db_type}')
 
     @staticmethod
+    def is_cloud_configured() -> bool:
+        """Return True when a cloud database (Neon/RDS/etc.) is configured.
+
+        When False, the pipeline falls back to file-only storage and
+        DB-backed stages (gold, quality) should be skipped.
+        """
+        return bool(
+            os.getenv('AWS_RDS_CONNECTION_STRING')
+            or os.getenv('AZURE_SQL_CONNECTION_STRING')
+            or os.getenv('DATABASE_URL')
+            or os.getenv('DB_TYPE', '').lower() == 'postgresql'
+        )
+
+    @staticmethod
     def create_engine_from_env():
         """Create a SQLAlchemy engine from the current environment."""
         conn_str = DatabaseConfig.get_connection_string()

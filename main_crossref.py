@@ -27,12 +27,8 @@ def load_config(config_path: str = "config.json") -> dict:
 
 def _db_configured() -> bool:
     """Return True when cloud DB credentials are present."""
-    return bool(
-        os.getenv('AWS_RDS_CONNECTION_STRING')
-        or os.getenv('AZURE_SQL_CONNECTION_STRING')
-        or os.getenv('DATABASE_URL')
-        or os.getenv('DB_TYPE', '').lower() == 'postgresql'
-    )
+    from database_config import DatabaseConfig
+    return DatabaseConfig.is_cloud_configured()
 
 
 def _prune_bronze(series_abbr: str, keep: int = 3):
@@ -228,14 +224,19 @@ def _refresh_gold(series_name: str):
 
 def _log_pipeline_run(series: str, records_fetched: int, records_new: int,
                       status: str, error: str = None,
-                      started_at: datetime = None):
-    """Write a row to pipeline_runs for observability."""
+                      started_at: datetime = None, run_type: str = 'full'):
+    """Write a row to pipeline_runs for observability.
+
+    Args:
+        run_type: 'full', 'incremental', or 'manual' — reflects how the run
+                  was invoked, so the table can be trusted as evaluation data.
+    """
     try:
         from database_config import DatabaseConfig
         from models_db import PipelineRun
         session = DatabaseConfig.get_session()
         session.add(PipelineRun(
-            run_type='incremental',
+            run_type=run_type,
             series=series,
             records_fetched=records_fetched,
             records_new=records_new,
@@ -252,7 +253,7 @@ def _log_pipeline_run(series: str, records_fetched: int, records_new: int,
 
 def scrape_single_series(series_config: dict, scraper: CrossRefScraper,
                         storage: DataLakeStorageHandler, year_start=None, year_end=None,
-                        max_results=50000):
+                        max_results=50000, run_type: str = 'full'):
     """
     Scrape a single Springer series using CrossRef.
     
@@ -263,6 +264,8 @@ def scrape_single_series(series_config: dict, scraper: CrossRefScraper,
         year_start: Optional start year filter
         year_end: Optional end year filter
         max_results: Maximum results to fetch
+        run_type: How this run was invoked ('full' / 'incremental' / 'manual');
+                  recorded in pipeline_runs so the table is trustworthy
     """
     name = series_config['name']
     abbr = series_config['abbreviation']
@@ -282,38 +285,44 @@ def scrape_single_series(series_config: dict, scraper: CrossRefScraper,
         print(f"  Note: {series_config.get('note', '')}")
         return []
 
+    started = _utcnow()
     publications = []
     raw_data = []
 
-    # Try ISSN-based search first (more reliable)
-    if issn:
-        print(f"Using ISSN: {issn}")
-        publications, raw_data = scraper.search_by_issn(issn, year_start, year_end, max_results)
+    try:
+        # Try ISSN-based search first (more reliable)
+        if issn:
+            print(f"Using ISSN: {issn}")
+            publications, raw_data = scraper.search_by_issn(issn, year_start, year_end, max_results)
+            
+            # Also try electronic ISSN if available
+            if not publications and 'issn_electronic' in series_config:
+                e_issn = series_config['issn_electronic']
+                print(f"Trying electronic ISSN: {e_issn}")
+                publications, raw_data = scraper.search_by_issn(e_issn, year_start, year_end, max_results)
         
-        # Also try electronic ISSN if available
-        if not publications and 'issn_electronic' in series_config:
-            e_issn = series_config['issn_electronic']
-            print(f"Trying electronic ISSN: {e_issn}")
-            publications, raw_data = scraper.search_by_issn(e_issn, year_start, year_end, max_results)
-    
-    # Fallback to title-based search
-    if not publications:
-        print(f"Falling back to series title search")
-        # Title search doesn't return raw data yet (can be added if needed)
-        publications = scraper.search_by_series_title(
-            name, "Springer", year_start, year_end, max_results
-        )
-        raw_data = []  # No raw data from title search
-    
+        # Fallback to title-based search
+        if not publications:
+            print(f"Falling back to series title search")
+            # Title search doesn't return raw data yet (can be added if needed)
+            publications = scraper.search_by_series_title(
+                name, "Springer", year_start, year_end, max_results
+            )
+            raw_data = []  # No raw data from title search
+    except Exception as exc:
+        # Record the failed run before propagating, so pipeline_runs
+        # tells the truth even when a scrape dies mid-flight.
+        if _db_configured():
+            _log_pipeline_run(name, 0, 0, 'failed', error=str(exc),
+                              started_at=started, run_type=run_type)
+        raise
+
     if publications:
         # Set series name for all publications
         for pub in publications:
             pub.series = name
 
-        started = _utcnow()
         records_new = 0
-        status = 'success'
-        error = None
 
         if _db_configured():
             # --- Cloud pipeline: Bronze → Silver → Gold → Log ---
@@ -321,7 +330,8 @@ def scrape_single_series(series_config: dict, scraper: CrossRefScraper,
             _write_bronze(raw_data, abbr, name)
             records_new = _write_silver(publications, name)
             _refresh_gold(name)
-            _log_pipeline_run(name, len(publications), records_new, status, started_at=started)
+            _log_pipeline_run(name, len(publications), records_new, 'success',
+                              started_at=started, run_type=run_type)
             print(f"Done: {abbr}: {len(publications)} fetched, {records_new} new in Neon")
         else:
             # --- Local fallback: write files only ---
@@ -330,11 +340,17 @@ def scrape_single_series(series_config: dict, scraper: CrossRefScraper,
             print(f"Done: {abbr}: {len(publications)} fetched, saved to local files")
     else:
         print(f"  No publications found for {abbr}")
+        # An empty result is still a completed run — log it (0 fetched, 0 new)
+        # so 'ran and found nothing' is distinguishable from 'never ran'.
+        if _db_configured():
+            _log_pipeline_run(name, 0, 0, 'success',
+                              started_at=started, run_type=run_type)
     
     return publications
 
 
-def scrape_all_series(config: dict, year_start=None, year_end=None, max_results=50000):
+def scrape_all_series(config: dict, year_start=None, year_end=None, max_results=50000,
+                      run_type: str = 'manual'):
     """
     Scrape all configured Springer series.
     
@@ -343,6 +359,7 @@ def scrape_all_series(config: dict, year_start=None, year_end=None, max_results=
         year_start: Optional start year filter
         year_end: Optional end year filter
         max_results: Maximum results per series
+        run_type: How this run was invoked; recorded in pipeline_runs
     """
     crossref_config = config['crossref_api']
     output_config = config['output']
@@ -358,7 +375,8 @@ def scrape_all_series(config: dict, year_start=None, year_end=None, max_results=
     
     for series_config in config['springer_series']:
         publications = scrape_single_series(
-            series_config, scraper, storage, year_start, year_end, max_results
+            series_config, scraper, storage, year_start, year_end, max_results,
+            run_type=run_type
         )
         all_publications.extend(publications)
         series_summary.append({
@@ -444,11 +462,13 @@ def main():
         
         scrape_single_series(
             series_config, scraper, storage, 
-            args.year_start, args.year_end, args.max_results
+            args.year_start, args.year_end, args.max_results,
+            run_type='manual'   # direct CLI invocation is a manual run
         )
     else:
         # Scrape all series
-        scrape_all_series(config, args.year_start, args.year_end, args.max_results)
+        scrape_all_series(config, args.year_start, args.year_end, args.max_results,
+                          run_type='manual')
 
 
 if __name__ == '__main__':
