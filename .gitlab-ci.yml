@@ -1,0 +1,61 @@
+# GitLab CI for the Springer title-increment pipeline.
+#   test     — runs on every push; pytest against a disposable Postgres service
+#   pipeline — runs ONLY on schedules (Build → Pipeline schedules); needs the
+#              DATABASE_URL masked variable to be set in project settings,
+#              otherwise the orchestrator safely falls back to file-only mode.
+#
+# Both jobs use stock Docker Hub images — no custom registry needed.
+
+stages:
+  - test
+  - pipeline
+
+default:
+  interruptible: true
+
+# ---------------------------------------------------------------------------
+# Stage: test — every push gets a full test run
+# ---------------------------------------------------------------------------
+test:
+  stage: test
+  image: python:3.12-slim
+  services:
+    - name: postgres:16-alpine
+      alias: postgres
+  variables:
+    POSTGRES_DB: springer_test
+    POSTGRES_USER: springer
+    POSTGRES_PASSWORD: springer_test
+    TEST_DATABASE_URL: postgresql+psycopg2://springer:springer_test@postgres:5432/springer_test
+  before_script:
+    - pip install --no-cache-dir -r requirements.txt -r requirements-dev.txt
+  script:
+    - pytest -v
+
+# ---------------------------------------------------------------------------
+# Stage: pipeline — the scheduled "interval extraction" the assignment requires
+# ---------------------------------------------------------------------------
+scheduled-pipeline:
+  stage: pipeline
+  image: python:3.12-slim
+  variables:
+    # DATABASE_URL comes from the masked CI/CD variable (Settings → CI/CD).
+    # When it is absent, init + orchestrator fall back to file-only mode
+    # rather than failing — but with it set, runs write to the Neon DB.
+    PIP_CACHE_DIR: "$CI_PROJECT_DIR/.pip-cache"
+  before_script:
+    - pip install --no-cache-dir -r requirements.txt
+  script:
+    - python init_database.py          # idempotent schema safety
+    - python orchestrator.py --incremental --max-results 500
+  cache:
+    key: pip
+    paths:
+      - .pip-cache
+  artifacts:
+    when: always
+    paths:
+      - logs/
+    expire_in: 30 days
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
