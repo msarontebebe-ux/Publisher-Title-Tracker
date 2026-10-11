@@ -51,6 +51,7 @@ def test_db():
         conn.execute(text('DROP SCHEMA IF EXISTS bronze CASCADE'))
         conn.execute(text('DROP SCHEMA IF EXISTS gold CASCADE'))
         conn.execute(text('DROP TABLE IF EXISTS events CASCADE'))
+        conn.execute(text('DROP TABLE IF EXISTS pipeline_state CASCADE'))
         conn.commit()
     Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
@@ -70,7 +71,7 @@ def db_env(test_db, monkeypatch):
     from sqlalchemy import create_engine, text
     engine = create_engine(test_db)
     with engine.connect() as conn:
-        conn.execute(text('TRUNCATE publication_authors, publications, authors, pipeline_runs, quality_metrics, events RESTART IDENTITY CASCADE'))
+        conn.execute(text('TRUNCATE publication_authors, publications, authors, pipeline_runs, quality_metrics, events, pipeline_state RESTART IDENTITY CASCADE'))
         conn.commit()
     engine.dispose()
 

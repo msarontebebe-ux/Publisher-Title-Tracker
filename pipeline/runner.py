@@ -433,17 +433,37 @@ def scrape_single_series(series_config: dict, scraper: CrossRefScraper,
     publications = []
     raw_data = []
 
+    # Watermark (high-water mark) for incremental runs: ask CrossRef only for
+    # what changed since the last SUCCESSFUL run, instead of re-scanning the
+    # whole current year. Full/manual runs keep their explicit year window.
+    from_created_date = None
+    if run_type == 'incremental' and _db_configured():
+        from pipeline.watermark import get_watermark, watermark_to_created_date
+        wm = get_watermark(name)
+        if wm is not None:
+            from_created_date = watermark_to_created_date(wm)
+            print(f"  Watermark: last successful run {wm.isoformat()} "
+                  f"→ fetching changes since {from_created_date}")
+        else:
+            # First incremental run: no bookmark yet. Fall back to the current
+            # year so we still capture recent titles; the watermark is set below.
+            print(f"  Watermark: none yet — first incremental run uses the year window")
+
     try:
         # Try ISSN-based search first (more reliable)
         if issn:
             print(f"Using ISSN: {issn}")
-            publications, raw_data = scraper.search_by_issn(issn, year_start, year_end, max_results)
-            
+            publications, raw_data = scraper.search_by_issn(
+                issn, year_start, year_end, max_results,
+                from_created_date=from_created_date)
+
             # Also try electronic ISSN if available
             if not publications and 'issn_electronic' in series_config:
                 e_issn = series_config['issn_electronic']
                 print(f"Trying electronic ISSN: {e_issn}")
-                publications, raw_data = scraper.search_by_issn(e_issn, year_start, year_end, max_results)
+                publications, raw_data = scraper.search_by_issn(
+                    e_issn, year_start, year_end, max_results,
+                    from_created_date=from_created_date)
         
         # Fallback to title-based search
         if not publications:
@@ -492,6 +512,14 @@ def scrape_single_series(series_config: dict, scraper: CrossRefScraper,
             _log_pipeline_run(name, len(publications), records_new, status,
                               error=error_msg,
                               started_at=started, run_type=run_type)
+            # Advance the watermark ONLY on a fully successful incremental run,
+            # so the next run fetches the delta after this one. A partial/failed
+            # run leaves the bookmark put and re-tries the same window.
+            if status == 'success' and run_type == 'incremental':
+                from pipeline.watermark import advance_watermark
+                new_wm = advance_watermark(name, when=_utcnow())
+                if new_wm:
+                    print(f"  Watermark advanced to {new_wm.isoformat()}")
             print(f"Done: {abbr}: {len(publications)} fetched, {records_new} new, "
                   f"{silver.skipped} skipped, status={status}")
         else:
@@ -506,6 +534,13 @@ def scrape_single_series(series_config: dict, scraper: CrossRefScraper,
         if _db_configured():
             _log_pipeline_run(name, 0, 0, 'success',
                               started_at=started, run_type=run_type)
+            # Nothing new, but we still successfully checked up to now — advance
+            # the bookmark so the next incremental run starts from here.
+            if run_type == 'incremental':
+                from pipeline.watermark import advance_watermark
+                new_wm = advance_watermark(name, when=_utcnow())
+                if new_wm:
+                    print(f"  Watermark advanced to {new_wm.isoformat()}")
     
     return publications
 

@@ -31,7 +31,8 @@ class CrossRefScraper:
         self.raw_responses = []
     
     def search_by_issn(self, issn: str, year_start: Optional[int] = None, 
-                       year_end: Optional[int] = None, max_results: int = 1000) -> Tuple[List[Publication], List[Dict[Any, Any]]]:
+                       year_end: Optional[int] = None, max_results: int = 1000,
+                       from_created_date: Optional[str] = None) -> Tuple[List[Publication], List[Dict[Any, Any]]]:
         """
         Search publications by ISSN (series identifier).
         Uses cursor-based pagination to bypass CrossRef's 10K offset limit.
@@ -41,6 +42,11 @@ class CrossRefScraper:
             year_start: Optional start year filter
             year_end: Optional end year filter
             max_results: Maximum number of results to fetch
+            from_created_date: Optional CrossRef from-created-date (YYYY-MM-DD).
+                Used by incremental runs to fetch only records created/changed
+                in CrossRef since the last watermark — the true delta, instead
+                of re-scanning a whole year. When set, it replaces the year
+                filters (they serve different purposes and must not combine).
             
         Returns:
             Tuple of (List of Publication objects, List of raw API responses)
@@ -60,8 +66,12 @@ class CrossRefScraper:
                 'select': 'DOI,title,subtitle,author,editor,published-print,published-online,container-title,volume,page,ISBN,ISSN,publisher,type,event'
             }
             
-            # Add year filter if specified
-            if year_start and year_end:
+            # Date filtering. A watermark (from_created_date) selects the true
+            # delta since the last run and takes precedence over year filters.
+            if from_created_date:
+                params['filter'] += f',from-created-date:{from_created_date}'
+                print(f"  Incremental: records created/changed since {from_created_date}")
+            elif year_start and year_end:
                 params['filter'] += f',from-pub-date:{year_start},until-pub-date:{year_end}'
             elif year_start:
                 params['filter'] += f',from-pub-date:{year_start}'

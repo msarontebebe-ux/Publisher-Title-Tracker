@@ -310,6 +310,31 @@ class TitleEvent(Base):
 
 
 # ---------------------------------------------------------------------------
+# PIPELINE STATE — the high-watermark (the "bookmark") for incremental runs
+# ---------------------------------------------------------------------------
+#
+# One row per series storing last_success_at: the moment of the last SUCCESSFUL
+# incremental run. The next incremental run asks the source for only what
+# changed after this timestamp (CrossRef from-created-date), instead of
+# re-scanning the whole current year. The watermark advances ONLY after a
+# successful run, so a failed run re-tries the same window and never loses data.
+
+class PipelineState(Base):
+    __tablename__ = 'pipeline_state'
+
+    series          = Column(String(100), primary_key=True)
+    last_success_at = Column(DateTime, nullable=False, index=True)
+    updated_at      = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'series':          self.series,
+            'last_success_at': self.last_success_at.isoformat() if self.last_success_at else None,
+            'updated_at':      self.updated_at.isoformat()      if self.updated_at      else None,
+        }
+
+
+# ---------------------------------------------------------------------------
 # GOLD — pre-computed aggregations (analytics-ready)
 # ---------------------------------------------------------------------------
 
