@@ -20,12 +20,9 @@ from pathlib import Path
 from sqlalchemy import text
 from pipeline.db import DatabaseConfig
 from pipeline.event_dates import ConferenceDateExtractor
+from pipeline.config import ensure_dotenv
 
-try:
-    from dotenv import load_dotenv
-    load_dotenv()
-except ImportError:
-    pass
+ensure_dotenv()   # load .env so DATABASE_URL is visible below
 
 CROSSREF_URL = "https://api.crossref.org/works"
 DELAY = 0.5  # seconds between pages (polite pool)

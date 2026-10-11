@@ -1,6 +1,5 @@
 """Main script for scraping Springer publications using CrossRef API."""
 
-import json
 import argparse
 import os
 from collections import namedtuple
@@ -8,22 +7,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from pipeline.scraper import CrossRefScraper
 from pipeline.storage import DataLakeStorageHandler
+# load_config / find_series_by_abbr live in pipeline.config (single source of
+# truth); importing it also loads .env so DATABASE_URL is visible below.
+from pipeline.config import load_config, find_series_by_abbr
 
 def _utcnow():
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
-# Load .env before anything else so DATABASE_URL is visible to _db_configured()
-try:
-    from dotenv import load_dotenv
-    load_dotenv()
-except ImportError:
-    pass
-
-
-def load_config(config_path: str = "config.json") -> dict:
-    """Load configuration from JSON file."""
-    with open(config_path, 'r', encoding='utf-8') as f:
-        return json.load(f)
 
 
 def _db_configured() -> bool:
@@ -483,11 +473,7 @@ def main():
     
     if args.series:
         # Scrape specific series
-        series_config = next(
-            (s for s in config['springer_series'] 
-             if s['abbreviation'].upper() == args.series.upper()),
-            None
-        )
+        series_config = find_series_by_abbr(args.series, config)
         
         if not series_config:
             print(f"Error: Series '{args.series}' not found in configuration")

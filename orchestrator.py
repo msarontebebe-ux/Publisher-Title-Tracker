@@ -23,6 +23,8 @@ from pathlib import Path
 from typing import List, Optional, Dict, Any
 import time
 
+from pipeline.config import load_config, find_series_by_abbr
+
 # Configure logging
 LOG_DIR = Path("logs")
 LOG_DIR.mkdir(exist_ok=True)
@@ -79,10 +81,7 @@ class PipelineConfig:
     
     def get_series_info(self, abbreviation: str) -> Optional[Dict[str, Any]]:
         """Get full series information."""
-        for s in self.config.get('springer_series', []):
-            if s['abbreviation'].upper() == abbreviation.upper():
-                return s
-        return None
+        return find_series_by_abbr(abbreviation, self.config)
 
 
 class PipelineStage:
@@ -146,14 +145,13 @@ class ScrapeStage(PipelineStage):
              max_results: int = 10000, email: str = None, delay: float = 1.0,
              run_type: str = 'full'):
         """Run the scraping process."""
-        from pipeline.runner import load_config, scrape_single_series
+        from pipeline.runner import scrape_single_series
         from pipeline.scraper import CrossRefScraper
         from pipeline.storage import DataLakeStorageHandler
-        
+
         config = load_config()
-        series_info = next((s for s in config['springer_series'] 
-                           if s['abbreviation'].upper() == series.upper()), None)
-        
+        series_info = find_series_by_abbr(series, config)
+
         if not series_info:
             raise ValueError(f"Series {series} not found in config.json")
         

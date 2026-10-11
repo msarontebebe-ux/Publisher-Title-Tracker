@@ -11,12 +11,9 @@ from datetime import datetime, timezone, timedelta
 from xml.sax.saxutils import escape as xml_escape
 from email.utils import format_datetime as fmt_rfc2822
 
-# Load .env first so DATABASE_URL is visible before anything else
-try:
-    from dotenv import load_dotenv
-    load_dotenv()
-except ImportError:
-    pass
+# Load .env first so DATABASE_URL is visible before anything else.
+# Importing pipeline.config loads .env and centralises the helpers below.
+from pipeline.config import load_series_map, resolve_series_name
 
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
@@ -34,9 +31,7 @@ DATA_DIR = Path("data")
 def _load_series_map() -> Dict[str, str]:
     """Return {abbreviation: full_name} from config.json."""
     try:
-        with open('config.json', encoding='utf-8') as f:
-            cfg = json.load(f)
-        return {s['abbreviation'].upper(): s['name'] for s in cfg.get('springer_series', [])}
+        return load_series_map()
     except Exception:
         return {}
 
@@ -48,10 +43,7 @@ def _resolve_series(abbr_or_name: str) -> str:
     Accept either an abbreviation (LNCS) or a full name and always
     return the full name as stored in the DB.
     """
-    if not abbr_or_name:
-        return abbr_or_name
-    upper = abbr_or_name.strip().upper()
-    return SERIES_MAP.get(upper, abbr_or_name)
+    return resolve_series_name(abbr_or_name, SERIES_MAP)
 
 
 # ---------------------------------------------------------------------------
@@ -59,13 +51,13 @@ def _resolve_series(abbr_or_name: str) -> str:
 # ---------------------------------------------------------------------------
 
 def _db_available() -> bool:
-    """True when a cloud DB connection string is present in the environment."""
-    return bool(
-        os.getenv('DATABASE_URL')
-        or os.getenv('AWS_RDS_CONNECTION_STRING')
-        or os.getenv('AZURE_SQL_CONNECTION_STRING')
-        or os.getenv('DB_TYPE', '').lower() == 'postgresql'
-    )
+    """True when a cloud DB connection string is present in the environment.
+
+    Delegates to DatabaseConfig.is_cloud_configured() — the single source of
+    truth for the env-var check shared with the pipeline (runner._db_configured).
+    """
+    from pipeline.db import DatabaseConfig
+    return DatabaseConfig.is_cloud_configured()
 
 
 # ---------------------------------------------------------------------------
@@ -92,32 +84,6 @@ def _search_db(series: str = None, year: int = None,
             q = q.filter(Publication.title.ilike(f'%{query}%'))
         q = q.order_by(Publication.year.desc()).limit(limit)
         return [pub.to_dict() for pub in q.all()]
-    finally:
-        session.close()
-
-
-def _series_stats_db() -> List[Dict]:
-    """Return per-series counts from the gold layer."""
-    session = _get_session()
-    try:
-        rows = session.execute(text("""
-            SELECT series, total_publications, total_unique_authors,
-                   year_min, year_max, avg_authors_per_paper
-            FROM gold.series_stats
-            ORDER BY total_publications DESC
-        """)).fetchall()
-        return [
-            {
-                'name':                 row[0],
-                'abbreviation':         row[0],
-                'total_publications':   row[1],
-                'total_unique_authors': row[2],
-                'year_min':             row[3],
-                'year_max':             row[4],
-                'avg_authors_per_paper': float(row[5]) if row[5] else 0,
-            }
-            for row in rows
-        ]
     finally:
         session.close()
 
@@ -166,7 +132,11 @@ def _gold_series_stats() -> List[Dict]:
         """)).fetchall()
         return [
             {
+                # 'series' is the canonical key used by the /api/gold/* endpoints;
+                # 'name'/'abbreviation' mirror it for the /api/series consumer.
                 'series':                row[0],
+                'name':                  row[0],
+                'abbreviation':          row[0],
                 'total_publications':    row[1],
                 'total_unique_authors':  row[2],
                 'year_min':              row[3],
@@ -236,12 +206,18 @@ def _gold_top_authors(series: str = None, limit: int = 20) -> List[Dict]:
 # ---------------------------------------------------------------------------
 
 def _load_live_files() -> Dict[str, List[Dict]]:
-    live_dir = DATA_DIR / "live"
+    """Load per-series publications from the silver JSON files on disk.
+
+    These are the files the pipeline writes to data/silver/{ABBR}_cleaned.json
+    (the Silver layer). Used only as a local fallback when DATABASE_URL is not
+    configured, so the API still serves something without a database.
+    """
+    silver_dir = DATA_DIR / "silver"
     series_data = {}
-    if not live_dir.exists():
+    if not silver_dir.exists():
         return {}
-    for file in live_dir.glob("*_filtered.json"):
-        series_abbr = file.stem.replace('_filtered', '')
+    for file in silver_dir.glob("*_cleaned.json"):
+        series_abbr = file.stem.replace('_cleaned', '')
         try:
             with open(file, 'r', encoding='utf-8') as f:
                 data = json.load(f)
@@ -339,7 +315,7 @@ def get_series():
     if _db_available():
         try:
             return jsonify({
-                'series':       _series_stats_db(),
+                'series':       _gold_series_stats(),
                 'source':       'database',
             })
         except Exception as e:
