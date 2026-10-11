@@ -3,6 +3,7 @@
 import json
 import argparse
 import os
+from collections import namedtuple
 from datetime import datetime, timezone
 from pathlib import Path
 from crossref_scraper import CrossRefScraper
@@ -84,13 +85,25 @@ def _write_bronze(raw_data: list, series_abbr: str, series_name: str):
     _prune_bronze(series_abbr, keep=3)
 
 
-def _write_silver(publications, series_name: str) -> int:
+SilverResult = namedtuple('SilverResult',
+                          ['inserted', 'skipped', 'failed', 'errors'])
+
+
+def _write_silver(publications, series_name: str) -> "SilverResult":
     """
     Upsert cleaned publications into silver tables in batches of 100.
     Each batch is its own committed transaction to avoid Neon serverless timeouts.
     Author cache stores IDs (not ORM objects) to avoid detached-instance errors
     across sessions.
-    Returns total count inserted.
+
+    Returns a SilverResult so the caller can log a TRUTHFUL status:
+      - inserted : number of rows newly written
+      - skipped  : number of rows dropped (no DOI, or DOI already present)
+      - failed   : number of batches that rolled back (could not be written)
+      - errors   : one message per failed batch
+
+    A non-zero `failed` means the run was only partially successful; the
+    caller must NOT record it as a clean 'success'.
     """
     from database_config import DatabaseConfig
     from models_db import Publication, Author
@@ -100,6 +113,8 @@ def _write_silver(publications, series_name: str) -> int:
     pub_dicts = [p.to_dict() for p in publications]
     total_inserted = 0
     total_skipped = 0
+    failed_batches = 0
+    errors = []
 
     # Pre-load existing DOIs and author name→id into plain Python dicts/sets.
     # Plain Python types are safe to use across sessions — no detached ORM objects.
@@ -199,6 +214,8 @@ def _write_silver(publications, series_name: str) -> int:
 
         except Exception as exc:
             session.rollback()
+            failed_batches += 1
+            errors.append(f"batch {batch_start}-{batch_start+BATCH_SIZE}: {exc}")
             print(f"   Silver: batch {batch_start}-{batch_start+BATCH_SIZE} failed: {exc}")
         finally:
             session.close()
@@ -210,8 +227,10 @@ def _write_silver(publications, series_name: str) -> int:
 
     if len(pub_dicts) > BATCH_SIZE:
         print()  # newline after progress line
-    print(f"   Silver: inserted={total_inserted}  skipped={total_skipped}")
-    return total_inserted
+    print(f"   Silver: inserted={total_inserted}  skipped={total_skipped}"
+          + (f"  FAILED_BATCHES={failed_batches}" if failed_batches else ""))
+    return SilverResult(inserted=total_inserted, skipped=total_skipped,
+                        failed=failed_batches, errors=errors)
 
 
 def _refresh_gold(series_name: str):
@@ -329,11 +348,25 @@ def scrape_single_series(series_config: dict, scraper: CrossRefScraper,
             # --- Cloud pipeline: Bronze → Silver → Gold → Log ---
             print(f"\n  Writing to Neon (3 layers):")
             _write_bronze(raw_data, abbr, name)
-            records_new = _write_silver(publications, name)
+            silver = _write_silver(publications, name)
+            records_new = silver.inserted
             _refresh_gold(name)
-            _log_pipeline_run(name, len(publications), records_new, 'success',
+
+            # Truthful status: a batch that failed to commit means the run was
+            # only partially successful — record 'partial' (with the errors),
+            # never a clean 'success'. This is the audit trail NFR3 relies on.
+            if silver.failed:
+                status = 'partial'
+                error_msg = f"{silver.failed} batch(es) failed: " + "; ".join(silver.errors)
+            else:
+                status = 'success'
+                error_msg = None
+
+            _log_pipeline_run(name, len(publications), records_new, status,
+                              error=error_msg,
                               started_at=started, run_type=run_type)
-            print(f"Done: {abbr}: {len(publications)} fetched, {records_new} new in Neon")
+            print(f"Done: {abbr}: {len(publications)} fetched, {records_new} new, "
+                  f"{silver.skipped} skipped, status={status}")
         else:
             # --- Local fallback: write files only ---
             print(f"\n  No DB configured — saving to local files only")

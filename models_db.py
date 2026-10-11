@@ -234,7 +234,7 @@ class PipelineRun(Base):
     series          = Column(String(255))
     records_fetched = Column(Integer)
     records_new     = Column(Integer)
-    status          = Column(String(20), index=True)   # success / failed
+    status          = Column(String(20), index=True)   # success / partial / failed
     error_message   = Column(Text)
     started_at      = Column(DateTime, index=True)
     completed_at    = Column(DateTime)

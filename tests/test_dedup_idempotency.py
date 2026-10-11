@@ -48,7 +48,8 @@ def test_first_load_inserts_everything(db_env):
     from database_config import DatabaseConfig
 
     inserted = _write_silver(_make_publications(), 'Test Series')
-    assert inserted == 2
+    assert inserted.inserted == 2
+    assert inserted.failed == 0
     assert _count(DatabaseConfig.get_session) == 2
 
 
@@ -62,7 +63,8 @@ def test_second_load_inserts_zero(db_env):
 
     # Second identical load — must be a no-op
     inserted_again = _write_silver(_make_publications(), 'Test Series')
-    assert inserted_again == 0
+    assert inserted_again.inserted == 0
+    assert inserted_again.failed == 0
     assert _count(DatabaseConfig.get_session) == 2
 
 
@@ -77,7 +79,8 @@ def test_partial_overlap_inserts_only_new(db_env):
     new_only[0].doi = '10.1007/978-3-000-00000-3_1'   # make it genuinely new
     inserted = _write_silver(new_only, 'Test Series')
 
-    assert inserted == 1
+    assert inserted.inserted == 1
+    assert inserted.failed == 0
     assert _count(DatabaseConfig.get_session) == 3
 
 
@@ -91,7 +94,8 @@ def test_publication_without_doi_is_skipped(db_env):
     orphan.doi = None
     inserted = _write_silver([orphan], 'Test Series')
 
-    assert inserted == 0
+    assert inserted.inserted == 0
+    assert inserted.failed == 0
     assert _count(DatabaseConfig.get_session) == before
 
 
@@ -118,3 +122,31 @@ def test_authors_deduplicated_by_name(db_env):
 
     assert alice == 1      # one author row
     assert links == 2      # linked to both volumes
+
+
+def test_failed_batch_is_reported_not_silently_success(db_env, monkeypatch):
+    """Regression guard for the 'partial writes logged as success' bug.
+
+    If a batch cannot commit, the run must report failed>0 (so the caller
+    logs 'partial'), NOT a clean success. Previously this failed silently:
+    the except block printed a message but the run was still recorded as
+    'success', making pipeline_runs untrustworthy.
+    """
+    from main_crossref import _write_silver
+    from sqlalchemy.orm import Session
+
+    # Force every batch commit to raise. The initial session that loads
+    # existing DOIs only does execute()/close() — never commit() — so it is
+    # unaffected; only the batch write is broken, which is the real scenario.
+    def boom(self):
+        raise RuntimeError("simulated commit failure (disk full)")
+
+    monkeypatch.setattr(Session, "commit", boom)
+
+    result = _write_silver(_make_publications(), 'Test Series')
+
+    # The failure must be surfaced, not swallowed:
+    assert result.failed >= 1          # at least one batch rolled back
+    assert result.inserted == 0        # nothing was actually persisted
+    assert result.errors               # and an error message was captured
+    assert "simulated commit failure" in result.errors[0]
