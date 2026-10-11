@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 from typing import List, Dict, Any
 from datetime import datetime
-from models_db import ScrapedPublication as Publication, ScrapedAuthor as Author
+from pipeline.models import ScrapedPublication as Publication, ScrapedAuthor as Author
 
 
 class DataLakeStorageHandler:

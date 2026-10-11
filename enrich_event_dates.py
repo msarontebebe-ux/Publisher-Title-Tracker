@@ -18,8 +18,8 @@ import time
 import requests
 from pathlib import Path
 from sqlalchemy import text
-from database_config import DatabaseConfig
-from event_date_extractor import ConferenceDateExtractor
+from pipeline.db import DatabaseConfig
+from pipeline.event_dates import ConferenceDateExtractor
 
 try:
     from dotenv import load_dotenv
@@ -280,7 +280,7 @@ def main():
 
     # Recompute gold quality metrics
     print("\nRecomputing quality metrics...")
-    from gold_layer import refresh_gold
+    from pipeline.gold import refresh_gold
     refresh_gold()
     print("Done.")
 

@@ -10,8 +10,8 @@ Safe to re-run — uses CREATE IF NOT EXISTS semantics.
 import json
 from pathlib import Path
 from sqlalchemy import text
-from database_config import DatabaseConfig
-from models_db import Base, Series
+from pipeline.db import DatabaseConfig
+from pipeline.models import Base, Series
 
 
 def init_database():

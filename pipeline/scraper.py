@@ -5,8 +5,8 @@ import time
 import re
 from typing import List, Optional, Dict, Any, Tuple
 from urllib.parse import urlencode
-from models_db import ScrapedPublication as Publication, ScrapedAuthor as Author
-from event_date_extractor import ConferenceDateExtractor
+from pipeline.models import ScrapedPublication as Publication, ScrapedAuthor as Author
+from pipeline.event_dates import ConferenceDateExtractor
 
 
 class CrossRefScraper:

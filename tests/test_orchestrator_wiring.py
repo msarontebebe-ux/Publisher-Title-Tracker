@@ -16,8 +16,8 @@ from orchestrator import ScrapeStage, PipelineConfig, PipelineOrchestrator
 class TestScrapeStageWiring:
 
     def test_calls_real_function_with_correct_arguments(self):
-        """The stage must invoke main_crossref.scrape_single_series."""
-        with patch('main_crossref.scrape_single_series') as mock_scrape:
+        """The stage must invoke pipeline.runner.scrape_single_series."""
+        with patch('pipeline.runner.scrape_single_series') as mock_scrape:
             mock_scrape.return_value = ['pub1', 'pub2']
             stage = ScrapeStage()
             ok = stage.execute(
@@ -34,7 +34,7 @@ class TestScrapeStageWiring:
             assert kwargs['run_type'] == 'incremental'
 
     def test_metrics_recorded(self):
-        with patch('main_crossref.scrape_single_series') as mock_scrape:
+        with patch('pipeline.runner.scrape_single_series') as mock_scrape:
             mock_scrape.return_value = ['a', 'b', 'c']
             stage = ScrapeStage()
             stage.execute(series='CCIS', year_start=2026, max_results=10,
@@ -42,7 +42,7 @@ class TestScrapeStageWiring:
             assert stage.metrics['records_fetched'] == 3
 
     def test_unknown_series_fails_the_stage(self):
-        with patch('main_crossref.scrape_single_series'):
+        with patch('pipeline.runner.scrape_single_series'):
             stage = ScrapeStage()
             ok = stage.execute(series='NOTASERIES', year_start=2026,
                                max_results=10, email='t@example.com', delay=1.0)
@@ -51,8 +51,8 @@ class TestScrapeStageWiring:
 
     def test_scraper_built_with_config_email(self):
         """The polite-pool email must reach the scraper client (bug #2)."""
-        with patch('main_crossref.scrape_single_series'), \
-             patch('crossref_scraper.CrossRefScraper') as mock_client:
+        with patch('pipeline.runner.scrape_single_series'), \
+             patch('pipeline.scraper.CrossRefScraper') as mock_client:
             mock_client.return_value = MagicMock()
             stage = ScrapeStage()
             stage.execute(series='LNCS', year_start=2026, max_results=10,

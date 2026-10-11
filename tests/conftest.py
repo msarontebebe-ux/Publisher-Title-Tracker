@@ -42,7 +42,7 @@ def test_db():
         pytest.skip(f'Test database not reachable: {exc}')
 
     # Fresh slate: drop all tables (and medallion schemas) from prior runs
-    from models_db import Base
+    from pipeline.models import Base
     with engine.connect() as conn:
         conn.execute(text('DROP SCHEMA IF EXISTS bronze CASCADE'))
         conn.execute(text('DROP SCHEMA IF EXISTS gold CASCADE'))

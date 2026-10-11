@@ -9,7 +9,7 @@ Requires a reachable test database (see tests/conftest.py for the URL).
 Skips politely when none is available — CI always provides one.
 """
 
-from models_db import ScrapedPublication as Pub, ScrapedAuthor as Author
+from pipeline.models import ScrapedPublication as Pub, ScrapedAuthor as Author
 
 
 def _make_publications():
@@ -44,8 +44,8 @@ def _count(session_factory):
 
 
 def test_first_load_inserts_everything(db_env):
-    from main_crossref import _write_silver
-    from database_config import DatabaseConfig
+    from pipeline.runner import _write_silver
+    from pipeline.db import DatabaseConfig
 
     inserted = _write_silver(_make_publications(), 'Test Series')
     assert inserted.inserted == 2
@@ -55,8 +55,8 @@ def test_first_load_inserts_everything(db_env):
 
 def test_second_load_inserts_zero(db_env):
     """Same DOIs again → nothing new. The heart of 'increment detection'."""
-    from main_crossref import _write_silver
-    from database_config import DatabaseConfig
+    from pipeline.runner import _write_silver
+    from pipeline.db import DatabaseConfig
 
     # First load (module-scoped test_db persists across tests in this module)
     _write_silver(_make_publications(), 'Test Series')
@@ -70,8 +70,8 @@ def test_second_load_inserts_zero(db_env):
 
 def test_partial_overlap_inserts_only_new(db_env):
     """Mixed batch: 1 known DOI + 1 brand-new DOI → exactly 1 insert."""
-    from main_crossref import _write_silver
-    from database_config import DatabaseConfig
+    from pipeline.runner import _write_silver
+    from pipeline.db import DatabaseConfig
 
     _write_silver(_make_publications(), 'Test Series')
 
@@ -86,8 +86,8 @@ def test_partial_overlap_inserts_only_new(db_env):
 
 def test_publication_without_doi_is_skipped(db_env):
     """FR3: DOI is the identity — records without one must not be stored."""
-    from main_crossref import _write_silver
-    from database_config import DatabaseConfig
+    from pipeline.runner import _write_silver
+    from pipeline.db import DatabaseConfig
 
     before = _count(DatabaseConfig.get_session)
     orphan = _make_publications()[0]
@@ -101,8 +101,8 @@ def test_publication_without_doi_is_skipped(db_env):
 
 def test_authors_deduplicated_by_name(db_env):
     """Alice Author appears in multiple volumes — stored once, linked twice."""
-    from main_crossref import _write_silver
-    from database_config import DatabaseConfig
+    from pipeline.runner import _write_silver
+    from pipeline.db import DatabaseConfig
     from sqlalchemy import text
 
     _write_silver(_make_publications(), 'Test Series')
@@ -132,7 +132,7 @@ def test_failed_batch_is_reported_not_silently_success(db_env, monkeypatch):
     the except block printed a message but the run was still recorded as
     'success', making pipeline_runs untrustworthy.
     """
-    from main_crossref import _write_silver
+    from pipeline.runner import _write_silver
     from sqlalchemy.orm import Session
 
     # Force every batch commit to raise. The initial session that loads

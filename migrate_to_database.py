@@ -12,7 +12,7 @@ import json
 from pathlib import Path
 from datetime import datetime
 
-from models_db import ScrapedPublication as Publication, ScrapedAuthor as Author
+from pipeline.models import ScrapedPublication as Publication, ScrapedAuthor as Author
 
 SILVER_DIR = Path("data/silver")
 
@@ -55,7 +55,7 @@ def load_publications_from_json(filepath: Path) -> list[Publication]:
 
 
 def main():
-    from main_crossref import _write_silver, _refresh_gold
+    from pipeline.runner import _write_silver, _refresh_gold
 
     print("=" * 60)
     print("Silver JSON -> Neon Database Migration")
@@ -92,7 +92,7 @@ def main():
 
     # Recompute Gold layer + quality metrics for all series
     print("\nRecomputing gold layer + quality metrics...")
-    from gold_layer import refresh_gold
+    from pipeline.gold import refresh_gold
     refresh_gold()
     print("Gold layer ready.")
 

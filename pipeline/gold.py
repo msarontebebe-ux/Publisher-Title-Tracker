@@ -9,8 +9,8 @@ Computes three aggregation tables in the gold schema:
 
 from datetime import datetime
 from sqlalchemy import text
-from database_config import DatabaseConfig
-from models_db import GoldSeriesStat, GoldYearlyTrend, GoldTopAuthor
+from pipeline.db import DatabaseConfig
+from pipeline.models import GoldSeriesStat, GoldYearlyTrend, GoldTopAuthor
 
 
 def compute_series_stats(session, series_filter: str = None):
@@ -151,7 +151,7 @@ def compute_quality_metrics(session, series_filter: str = None):
       event_date_coverage_pct — % of records that have a conference start date
       author_coverage_pct     — % of records linked to at least one author
     """
-    from models_db import QualityMetric
+    from pipeline.models import QualityMetric
 
     where  = "WHERE p.series = :series" if series_filter else "WHERE p.series IS NOT NULL"
     params = {'series': series_filter} if series_filter else {}

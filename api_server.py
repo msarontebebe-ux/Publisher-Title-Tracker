@@ -73,13 +73,13 @@ def _db_available() -> bool:
 # ---------------------------------------------------------------------------
 
 def _get_session():
-    from database_config import DatabaseConfig
+    from pipeline.db import DatabaseConfig
     return DatabaseConfig.get_session()
 
 
 def _search_db(series: str = None, year: int = None,
                query: str = None, limit: int = 100) -> List[Dict]:
-    from models_db import Publication
+    from pipeline.models import Publication
     session = _get_session()
     try:
         q = session.query(Publication)
@@ -546,7 +546,7 @@ def get_new_publications():
         return jsonify({'error': 'Database not configured'}), 503
 
     try:
-        from models_db import Publication
+        from pipeline.models import Publication
         session = _get_session()
         try:
             q = session.query(Publication).filter(Publication.fetched_at >= since)
@@ -585,7 +585,7 @@ def rss_feed():
         return 'Database not configured', 503
 
     try:
-        from models_db import Publication
+        from pipeline.models import Publication
         session = _get_session()
         try:
             q = session.query(Publication)

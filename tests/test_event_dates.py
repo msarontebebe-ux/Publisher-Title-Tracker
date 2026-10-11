@@ -6,7 +6,7 @@ the regex extraction behaves as documented in the thesis; when one fails after
 a code change, the change broke a promised behaviour.
 """
 
-from event_date_extractor import ConferenceDateExtractor as E
+from pipeline.event_dates import ConferenceDateExtractor as E
 
 
 class TestDateRangePatterns:

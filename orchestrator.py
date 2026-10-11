@@ -146,9 +146,9 @@ class ScrapeStage(PipelineStage):
              max_results: int = 10000, email: str = None, delay: float = 1.0,
              run_type: str = 'full'):
         """Run the scraping process."""
-        from main_crossref import load_config, scrape_single_series
-        from crossref_scraper import CrossRefScraper
-        from storage import DataLakeStorageHandler
+        from pipeline.runner import load_config, scrape_single_series
+        from pipeline.scraper import CrossRefScraper
+        from pipeline.storage import DataLakeStorageHandler
         
         config = load_config()
         series_info = next((s for s in config['springer_series'] 
@@ -192,8 +192,8 @@ class QualityCheckStage(PipelineStage):
     
     def _run(self, series: Optional[str] = None):
         """Run quality checks and update quality_metrics table."""
-        from gold_layer import compute_quality_metrics
-        from database_config import DatabaseConfig
+        from pipeline.gold import compute_quality_metrics
+        from pipeline.db import DatabaseConfig
         
         if not DatabaseConfig.is_cloud_configured():
             self.logger.info("No cloud DB configured — skipping quality check (file-only mode)")
@@ -237,8 +237,8 @@ class GoldLayerStage(PipelineStage):
     
     def _run(self, series: Optional[str] = None):
         """Refresh gold layer tables."""
-        from gold_layer import refresh_gold
-        from database_config import DatabaseConfig
+        from pipeline.gold import refresh_gold
+        from pipeline.db import DatabaseConfig
         
         if not DatabaseConfig.is_cloud_configured():
             self.logger.info("No cloud DB configured — skipping gold refresh (file-only mode)")
