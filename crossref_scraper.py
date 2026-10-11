@@ -136,20 +136,25 @@ class CrossRefScraper:
         while len(publications) < max_results:
             params = {
                 'query.container-title': series_title,
-                'filter': f'publisher-name:{publisher}',
                 'rows': rows,
                 'offset': offset,
                 'sort': 'published',
                 'order': 'desc'
             }
             
-            # Add year filter
-            if year_start and year_end:
-                params['filter'] += f',from-pub-date:{year_start},until-pub-date:{year_end}'
-            elif year_start:
-                params['filter'] += f',from-pub-date:{year_start}'
-            elif year_end:
-                params['filter'] += f',until-pub-date:{year_end}'
+            # NOTE: no publisher-name filter here — CrossRef rejects it (HTTP 400).
+            # The container-title query alone is specific enough for series titles;
+            # year filters below narrow it further when requested.
+            
+            # Add year filter (build from scratch — there is no base filter to
+            # extend, since CrossRef rejects the publisher-name filter)
+            year_filters = []
+            if year_start:
+                year_filters.append(f'from-pub-date:{year_start}')
+            if year_end:
+                year_filters.append(f'until-pub-date:{year_end}')
+            if year_filters:
+                params['filter'] = ','.join(year_filters)
             
             try:
                 response = self.session.get(self.base_url, params=params, timeout=30)

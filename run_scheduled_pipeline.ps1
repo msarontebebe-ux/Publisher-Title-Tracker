@@ -1,5 +1,10 @@
 # Scheduled pipeline execution wrapper
-# This script is called by Task Scheduler
+# This script is called by Task Scheduler.
+# $Schedule comes from the task configuration: Daily | Weekly | Incremental
+
+param(
+    [string]$Schedule = "Incremental"
+)
 
 Set-Location "C:\Users\saron\project"
 
@@ -12,7 +17,7 @@ try {
 }
 
 # Run orchestrator based on schedule type
-switch ("Incremental") {
+switch ($Schedule) {
     "Daily" {
         python orchestrator.py --year-start 2020
     }
