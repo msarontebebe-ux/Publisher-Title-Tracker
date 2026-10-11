@@ -47,7 +47,7 @@ def init_database():
     tables = {
         'bronze': ['raw_responses'],
         'public (silver)': ['publications', 'authors', 'publication_authors',
-                            'series', 'pipeline_runs', 'quality_metrics'],
+                            'series', 'pipeline_runs', 'quality_metrics', 'events'],
         'gold': ['series_stats', 'yearly_trends', 'top_authors'],
     }
     for schema, tbl_list in tables.items():

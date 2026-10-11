@@ -41,11 +41,16 @@ def test_db():
     except Exception as exc:
         pytest.skip(f'Test database not reachable: {exc}')
 
-    # Fresh slate: drop all tables (and medallion schemas) from prior runs
+    # Fresh slate: drop all tables (and medallion schemas) from prior runs.
+    # We drop the events table + its indexes explicitly first: create_all uses
+    # CREATE TABLE IF NOT EXISTS for tables but creates indexes unconditionally,
+    # so a leftover events table from an earlier run would make create_all fail
+    # with DuplicateTable. drop_all(CASCADE) below handles the rest.
     from pipeline.models import Base
     with engine.connect() as conn:
         conn.execute(text('DROP SCHEMA IF EXISTS bronze CASCADE'))
         conn.execute(text('DROP SCHEMA IF EXISTS gold CASCADE'))
+        conn.execute(text('DROP TABLE IF EXISTS events CASCADE'))
         conn.commit()
     Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
@@ -65,7 +70,7 @@ def db_env(test_db, monkeypatch):
     from sqlalchemy import create_engine, text
     engine = create_engine(test_db)
     with engine.connect() as conn:
-        conn.execute(text('TRUNCATE publication_authors, publications, authors, pipeline_runs, quality_metrics RESTART IDENTITY CASCADE'))
+        conn.execute(text('TRUNCATE publication_authors, publications, authors, pipeline_runs, quality_metrics, events RESTART IDENTITY CASCADE'))
         conn.commit()
     engine.dispose()
 

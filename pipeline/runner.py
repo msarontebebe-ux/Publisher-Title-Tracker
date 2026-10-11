@@ -1,6 +1,7 @@
 """Main script for scraping Springer publications using CrossRef API."""
 
 import argparse
+import json
 import os
 from collections import namedtuple
 from datetime import datetime, timezone
@@ -77,6 +78,139 @@ def _write_bronze(raw_data: list, series_abbr: str, series_name: str):
 
 SilverResult = namedtuple('SilverResult',
                           ['inserted', 'skipped', 'failed', 'errors'])
+
+
+EventResult = namedtuple('EventResult',
+                         ['added', 'updated', 'unchanged', 'failed'])
+
+
+def _write_events(publications, series_name: str) -> "EventResult":
+    """
+    Append change events (title.added / title.updated) to the events log.
+
+    Unlike _write_silver — which only inserts brand-new DOIs — this pass looks
+    at EVERY scraped record, including ones already present in `publications`,
+    so that a *changed* record (corrected title, added ISBN, new event date…)
+    is detected as title.updated rather than silently ignored.
+
+    Idempotency is enforced by the UNIQUE(source, source_record_id,
+    payload_hash) constraint via INSERT ... ON CONFLICT DO NOTHING, so
+    re-running over unchanged data adds zero events. See pipeline/events.py.
+
+    Returns an EventResult(added, updated, unchanged, failed) so the caller can
+    log truthfully and the evaluation chapter can measure add-vs-update rates.
+    """
+    from pipeline.db import DatabaseConfig
+    from pipeline.models import TitleEvent
+    from pipeline.events import (
+        payload_hash, canonical_record, classify_event_type, new_event_id,
+    )
+    from sqlalchemy import text as sa_text
+
+    pub_dicts = [p.to_dict() for p in publications]
+    if not pub_dicts:
+        return EventResult(added=0, updated=0, unchanged=0, failed=0)
+
+    added = updated = unchanged = 0
+    failed = 0
+
+    # Load the last-known fingerprint for every DOI we're about to process, so
+    # we can tell "new" from "changed" from "same" in plain Python.
+    session = DatabaseConfig.get_session()
+    try:
+        dois = [d.get('doi') for d in pub_dicts if d.get('doi')]
+        last_hash: dict = {}
+        if dois:
+            # Postgres: DISTINCT ON gives the most recent event per DOI.
+            rows = session.execute(sa_text("""
+                SELECT DISTINCT ON (source_record_id) source_record_id, payload_hash
+                FROM events
+                WHERE source = 'crossref' AND source_record_id = ANY(:dois)
+                ORDER BY source_record_id, id DESC
+            """), {'dois': dois}).fetchall()
+            last_hash = {row[0]: row[1] for row in rows}
+    finally:
+        session.close()
+
+    # One transaction for the whole batch — event rows are tiny and independent,
+    # so a single commit is safe and far cheaper than per-record commits.
+    session = DatabaseConfig.get_session()
+    try:
+        for pub_data in pub_dicts:
+            doi = pub_data.get('doi')
+            if not doi:
+                unchanged += 1
+                continue
+
+            existing_hash = last_hash.get(doi)
+            event_type = classify_event_type(pub_data, existing_hash)
+            if event_type is None:
+                unchanged += 1
+                continue
+
+            current_hash = payload_hash(pub_data)
+
+            # published_at: prefer a real event/publication date if present.
+            published_at = None
+            for key in ('event_date_start', 'event_date_end'):
+                raw = pub_data.get(key)
+                if raw:
+                    try:
+                        published_at = datetime.fromisoformat(raw).date()
+                        break
+                    except (ValueError, TypeError):
+                        pass
+
+            observed_at = None
+            if pub_data.get('fetched_at'):
+                try:
+                    observed_at = datetime.fromisoformat(pub_data['fetched_at'])
+                except (ValueError, TypeError):
+                    observed_at = None
+
+            session.execute(sa_text("""
+                INSERT INTO events
+                    (event_id, event_type, source, source_record_id, series,
+                     publisher, payload_hash, payload, published_at,
+                     observed_at, detected_at)
+                VALUES
+                    (:event_id, :event_type, :source, :doi, :series,
+                     :publisher, :payload_hash, CAST(:payload AS json), :published_at,
+                     :observed_at, :detected_at)
+                ON CONFLICT (source, source_record_id, payload_hash) DO NOTHING
+            """), {
+                'event_id':     new_event_id(),
+                'event_type':   event_type,
+                'source':       'crossref',
+                'doi':          doi,
+                'series':       pub_data.get('series') or series_name,
+                'publisher':    pub_data.get('publisher'),
+                'payload_hash': current_hash,
+                'payload':      json.dumps(canonical_record(pub_data)),
+                'published_at': published_at,
+                'observed_at':  observed_at,
+                'detected_at':  _utcnow(),
+            })
+
+            if event_type == 'title.added':
+                added += 1
+            else:
+                updated += 1
+            # Update our in-memory view so multiple records for the same DOI
+            # within one run don't each look "new".
+            last_hash[doi] = current_hash
+
+        session.commit()
+    except Exception as exc:
+        session.rollback()
+        failed += 1
+        print(f"   Events: write failed: {exc}")
+    finally:
+        session.close()
+
+    print(f"   Events: added={added}  updated={updated}  unchanged={unchanged}"
+          + (f"  FAILED" if failed else ""))
+    return EventResult(added=added, updated=updated, unchanged=unchanged, failed=failed)
 
 
 def _write_silver(publications, series_name: str) -> "SilverResult":
@@ -335,11 +469,14 @@ def scrape_single_series(series_config: dict, scraper: CrossRefScraper,
         records_new = 0
 
         if _db_configured():
-            # --- Cloud pipeline: Bronze → Silver → Gold → Log ---
+            # --- Cloud pipeline: Bronze → Silver → Events → Gold → Log ---
             print(f"\n  Writing to Neon (3 layers):")
             _write_bronze(raw_data, abbr, name)
             silver = _write_silver(publications, name)
             records_new = silver.inserted
+            # Append change events (title.added / title.updated). This is an
+            # additive projection — it never affects the silver write above.
+            events = _write_events(publications, name)
             _refresh_gold(name)
 
             # Truthful status: a batch that failed to commit means the run was

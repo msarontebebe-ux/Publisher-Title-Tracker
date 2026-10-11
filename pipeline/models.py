@@ -9,6 +9,7 @@ Schemas:
             series
             pipeline_runs
             quality_metrics
+            events              : append-only change log (title.added / title.updated)
   gold    — series_stats       : per-series aggregations
             yearly_trends      : publications per year per series
             top_authors        : author publication counts
@@ -73,7 +74,7 @@ class ScrapedPublication:
         return f"{self.title} - {names} ({self.year})"
 from sqlalchemy import (
     Column, Integer, String, Text, Date, DateTime,
-    ForeignKey, Table, Numeric, JSON, event,
+    ForeignKey, Table, Numeric, JSON, event, UniqueConstraint,
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
@@ -249,6 +250,62 @@ class PipelineRun(Base):
             'status':          self.status,
             'started_at':      self.started_at.isoformat()   if self.started_at   else None,
             'completed_at':    self.completed_at.isoformat() if self.completed_at else None,
+        }
+
+
+# ---------------------------------------------------------------------------
+# EVENTS — append-only change log (the "diary" / event-sourcing projection)
+# ---------------------------------------------------------------------------
+#
+# One row per OBSERVED CHANGE to a title, never edited or deleted:
+#   title.added    — a DOI seen for the first time
+#   title.updated  — a DOI seen before, but its canonical payload changed
+#
+# The UNIQUE(source, source_record_id, payload_hash) constraint makes the log
+# idempotent BY SCHEMA: re-running the pipeline over unchanged data cannot
+# create a duplicate event, because the identical (doi, fingerprint) pair is
+# rejected. Change detection is therefore an addition from an update, proven
+# by the database itself rather than by application logic.
+
+class TitleEvent(Base):
+    __tablename__ = 'events'
+    __table_args__ = (
+        # Idempotency is enforced here: the same (source, doi, fingerprint)
+        # triple can never be inserted twice. NOTE: per-column indexes come
+        # from index=True on the columns below; only indexes that do NOT map
+        # 1:1 to a single column belong here (to avoid DuplicateTable).
+        UniqueConstraint('source', 'source_record_id', 'payload_hash',
+                         name='uq_events_source_record_hash'),
+    )
+
+    id              = Column(Integer, primary_key=True, autoincrement=True)
+    event_id        = Column(String(64), unique=True, index=True)   # uuid4 hex
+    event_type      = Column(String(20), nullable=False, index=True)  # title.added | title.updated
+    source          = Column(String(50), default='crossref')        # data source / publisher connector
+    source_record_id= Column(String(255), nullable=False, index=True)  # the DOI
+    series          = Column(String(100), index=True)
+    publisher       = Column(String(100))
+    payload_hash    = Column(String(64), nullable=False)            # sha256 of canonical record
+    payload         = Column(JSON)                                  # the canonical record snapshot
+    published_at    = Column(Date)                                  # publication/event date, if known
+    observed_at     = Column(DateTime)                              # when the source produced the data
+    detected_at     = Column(DateTime, default=datetime.utcnow, index=True)  # when WE noticed it
+    delivered_at    = Column(DateTime, nullable=True)               # when served to a consumer (latency)
+
+    def to_dict(self):
+        return {
+            'event_id':        self.event_id,
+            'event_type':      self.event_type,
+            'source':          self.source,
+            'doi':             self.source_record_id,
+            'series':          self.series,
+            'publisher':       self.publisher,
+            'payload_hash':    self.payload_hash,
+            'payload':         self.payload,
+            'published_at':    self.published_at.isoformat()   if self.published_at else None,
+            'observed_at':     self.observed_at.isoformat()    if self.observed_at  else None,
+            'detected_at':     self.detected_at.isoformat()    if self.detected_at  else None,
+            'delivered_at':    self.delivered_at.isoformat()   if self.delivered_at else None,
         }
 
 

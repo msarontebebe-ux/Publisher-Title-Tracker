@@ -621,6 +621,137 @@ def rss_feed():
 
 
 # ---------------------------------------------------------------------------
+# Event stream (Phase 2) — the change log delivered to users
+# ---------------------------------------------------------------------------
+
+@app.route('/api/events')
+def get_events():
+    """
+    Return change events (title.added / title.updated) as JSON — the pull side
+    of the event stream. Clients poll this to see what changed since a date.
+
+    Params:
+      since   — ISO datetime/date. Defaults to 7 days ago.
+      type    — optional filter: 'title.added' or 'title.updated'
+      series  — optional series filter (abbreviation or full name)
+      limit   — max results (default 100, max 1000)
+
+    Marks returned events as delivered (delivered_at) so end-to-end latency
+    (detected_at -> delivered_at) can be measured later.
+    """
+    since_str = request.args.get('since')
+    ev_type   = request.args.get('type')
+    series    = request.args.get('series')
+    limit     = min(request.args.get('limit', default=100, type=int), 1000)
+
+    if since_str:
+        try:
+            since = datetime.fromisoformat(since_str)
+        except ValueError:
+            return jsonify({'error': 'Invalid date format. Use YYYY-MM-DD'}), 400
+    else:
+        since = datetime.utcnow() - timedelta(days=7)
+
+    if not _db_available():
+        return jsonify({'error': 'Database not configured'}), 503
+
+    try:
+        from pipeline.models import TitleEvent
+        session = _get_session()
+        try:
+            q = session.query(TitleEvent).filter(TitleEvent.detected_at >= since)
+            if ev_type:
+                q = q.filter(TitleEvent.event_type == ev_type)
+            if series:
+                full_name = _resolve_series(series)
+                q = q.filter(TitleEvent.series.ilike(f'%{full_name}%'))
+            q = q.order_by(TitleEvent.detected_at.desc()).limit(limit)
+            events = q.all()
+            results = [ev.to_dict() for ev in events]
+
+            # Mark as delivered (best-effort; never fails the request).
+            now = datetime.utcnow()
+            for ev in events:
+                if ev.delivered_at is None:
+                    ev.delivered_at = now
+            session.commit()
+        finally:
+            session.close()
+        return jsonify({
+            'results': results,
+            'count':   len(results),
+            'since':   since.isoformat(),
+            'source':  'database',
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/feed/events.atom')
+def events_atom_feed():
+    """
+    Atom feed of recent change events. Subscribe in any feed reader to be
+    notified when a title is added or updated — the push mechanism for the
+    event stream.
+
+    Params:
+      series — optional filter (abbreviation or full name)
+      limit  — number of entries (default 50, max 200)
+    """
+    series = request.args.get('series')
+    limit  = min(request.args.get('limit', default=50, type=int), 200)
+
+    if not _db_available():
+        return 'Database not configured', 503
+
+    try:
+        from pipeline.models import TitleEvent
+        session = _get_session()
+        try:
+            q = session.query(TitleEvent)
+            if series:
+                full_name = _resolve_series(series)
+                q = q.filter(TitleEvent.series.ilike(f'%{full_name}%'))
+            q = q.order_by(TitleEvent.detected_at.desc()).limit(limit)
+            events = q.all()
+
+            entries_xml = []
+            for ev in events:
+                doi = ev.source_record_id or ''
+                payload = ev.payload or {}
+                title_text = payload.get('title') or doi or 'Untitled'
+                entry_title = xml_escape(f"[{ev.event_type}] {title_text}")
+                link = xml_escape(f'https://doi.org/{doi}' if doi else request.host_url)
+                updated = fmt_rfc2822(
+                    (ev.detected_at or datetime.utcnow()).replace(tzinfo=timezone.utc)
+                )
+                summary_bits = [ev.event_type, ev.series or '', ev.publisher or '']
+                summary = xml_escape(' · '.join(b for b in summary_bits if b))
+                entries_xml.append(f"""  <entry>
+    <title>{entry_title}</title>
+    <link href="{link}"/>
+    <id>urn:uuid:{xml_escape(ev.event_id or '')}</id>
+    <updated>{updated}</updated>
+    <summary>{summary}</summary>
+  </entry>""")
+        finally:
+            session.close()
+    except Exception as e:
+        return str(e), 500
+
+    feed_title = f'Springer Title Events — {series.upper()}' if series else 'Springer Title Events'
+    xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>{xml_escape(feed_title)}</title>
+  <link href="{xml_escape(request.base_url)}"/>
+  <updated>{fmt_rfc2822(datetime.utcnow().replace(tzinfo=timezone.utc))}</updated>
+{chr(10).join(entries_xml)}
+</feed>"""
+
+    return app.response_class(xml, mimetype='application/atom+xml')
+
+
+# ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
 
@@ -638,6 +769,8 @@ if __name__ == '__main__':
     print("  GET /api/publications/recent")
     print("  GET /api/publications/new?since=2024-01-01&series=LNCS  [PUSH]")
     print("  GET /feed.rss?series=LNCS                               [PUSH/RSS]")
+    print("  GET /api/events?since=2024-01-01&type=title.added       [EVENTS]")
+    print("  GET /feed/events.atom?series=LNCS                       [EVENTS/ATOM]")
     print("  GET /api/stats")
     print("  GET /api/gold/stats")
     print("  GET /api/gold/trends?series=LNCS")
