@@ -29,13 +29,18 @@ class DatabaseConfig:
         2. Individual components   (DB_TYPE + DB_HOST + DB_NAME + DB_USER + DB_PASSWORD)
         3. Local SQLite fallback   (DB_TYPE=sqlite or nothing set)
         """
-        # Full connection string — Neon / RDS / Supabase paste it directly
+        # Full connection string — Neon / RDS / Supabase paste it directly.
+        # Rewrite bare postgresql:// to postgresql+psycopg2:// so SQLAlchemy
+        # uses the driver we ship in requirements.txt (SQLAlchemy 2.1 defaults
+        # to psycopg v3, which is not installed).
         full = (
             os.getenv('AWS_RDS_CONNECTION_STRING')
             or os.getenv('AZURE_SQL_CONNECTION_STRING')
             or os.getenv('DATABASE_URL')
         )
         if full:
+            if full.startswith('postgresql://'):
+                full = full.replace('postgresql://', 'postgresql+psycopg2://', 1)
             return full
 
         db_type = os.getenv('DB_TYPE', 'sqlite')

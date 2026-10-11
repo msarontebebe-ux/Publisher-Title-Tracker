@@ -194,7 +194,8 @@ def _write_silver(publications, series_name: str) -> int:
             # Now IDs are assigned — persist new authors into the cross-batch cache
             for name, author in new_authors_this_batch.items():
                 author_name_to_id[name] = author.id
-            total_skipped += (len(batch) - batch_inserted)
+            # NOTE: skips were already counted inside the record loop above —
+            # do not count batch misses again here (would double-count them).
 
         except Exception as exc:
             session.rollback()
