@@ -1,5 +1,6 @@
 """
-REST API for serving Springer publications from Neon PostgreSQL.
+REST API for the publisher title tracker (Springer, Elsevier, Wiley, IEEE, ACM),
+serving data from Neon PostgreSQL.
 Falls back to local JSON files if DATABASE_URL is not configured.
 """
 
@@ -13,9 +14,11 @@ from email.utils import format_datetime as fmt_rfc2822
 
 # Load .env first so DATABASE_URL is visible before anything else.
 # Importing pipeline.config loads .env and centralises the helpers below.
-from pipeline.config import load_series_map, resolve_series_name
+from pipeline.config import (
+    load_series_map, resolve_series_name, load_publisher_streams, resolve_publisher,
+)
 
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, jsonify, request, send_from_directory, redirect
 from flask_cors import CORS
 from sqlalchemy import text
 
@@ -36,6 +39,21 @@ def _load_series_map() -> Dict[str, str]:
         return {}
 
 SERIES_MAP = _load_series_map()   # e.g. {"LNCS": "Lecture Notes in Computer Science", ...}
+
+
+def _load_publisher_streams() -> list:
+    try:
+        return load_publisher_streams()
+    except Exception:
+        return []
+
+PUBLISHER_STREAMS = _load_publisher_streams()
+
+
+def _publisher_series(publisher: str):
+    """Series/stream names belonging to a publisher, or None if it is unknown."""
+    entry = resolve_publisher(publisher, PUBLISHER_STREAMS)
+    return entry['series'] if entry else None
 
 
 def _resolve_series(abbr_or_name: str) -> str:
@@ -70,7 +88,8 @@ def _get_session():
 
 
 def _search_db(series: str = None, year: int = None,
-               query: str = None, limit: int = 100) -> List[Dict]:
+               query: str = None, limit: int = 100,
+               publisher_series: List[str] = None, work_type: str = None) -> List[Dict]:
     from pipeline.models import Publication
     session = _get_session()
     try:
@@ -78,11 +97,15 @@ def _search_db(series: str = None, year: int = None,
         if series:
             full_name = _resolve_series(series)
             q = q.filter(Publication.series.ilike(f'%{full_name}%'))
+        if publisher_series:
+            q = q.filter(Publication.series.in_(publisher_series))
+        if work_type:
+            q = q.filter(Publication.work_type == work_type)
         if year:
             q = q.filter(Publication.year == year)
         if query:
             q = q.filter(Publication.title.ilike(f'%{query}%'))
-        q = q.order_by(Publication.year.desc()).limit(limit)
+        q = q.order_by(Publication.year.desc(), Publication.fetched_at.desc()).limit(limit)
         return [pub.to_dict() for pub in q.all()]
     finally:
         session.close()
@@ -257,15 +280,18 @@ def home():
 @app.route('/api')
 def api_index():
     return jsonify({
-        'name':    'Springer Publications API',
+        'name':    'Publisher Title Tracker API',
         'version': '2.0',
         'backend': 'database' if _db_available() else 'local-files',
         'endpoints': {
+            '/api/publishers':            'Tracked publishers with counts, work types and last successful run',
             '/api/series':                'All series with publication counts',
-            '/api/publications':          'Search publications (params: series, year, query, limit)',
+            '/api/publications':          'Search publications (params: publisher, series, type, year, query, limit)',
             '/api/publications/recent':   'Most recent publications',
-            '/api/publications/new':      'PUSH — new additions since a date (param: since=YYYY-MM-DD, series)',
-            '/feed.rss':                  'PUSH — RSS feed for subscription (param: series, limit)',
+            '/api/publications/new':      'PUSH — new additions since a date (params: since=YYYY-MM-DD, publisher, series, type)',
+            '/feed.rss':                  'PUSH — RSS feed for subscription (params: publisher, series, type, limit)',
+            '/api/events':                'Change events title.added / title.updated (params: since, type, publisher, series, work_type, limit)',
+            '/feed/events.atom':          'Atom feed of change events (params: publisher, series, limit)',
             '/api/stats':                 'Overall database statistics',
             '/api/gold/stats':            'Gold layer: per-series aggregations',
             '/api/gold/trends':           'Gold layer: yearly publication trends (param: series)',
@@ -273,6 +299,82 @@ def api_index():
             '/health':                    'Health check',
         },
     })
+
+
+@app.route('/api/doi/<path:doi>')
+def doi_redirect(doi):
+    """
+    Smart link for a title. Raw https://doi.org/... links break for some
+    proceedings (e.g. IEEE, whose DOIs resolve to a dead mostRecentIssue page),
+    so resolve the landing page here and fall back to a search engine:
+      1. ask doi.org where the DOI points (first redirect hop only) and use it;
+      2. for known-broken IEEE mostRecentIssue links, go to IEEE Xplore's own
+         search for that DOI instead;
+      3. anything else falls back to a Google Scholar title search.
+    """
+    import urllib.request
+
+    title = None
+    target = None
+    try:
+        from pipeline.models import Publication
+        session = _get_session()
+        try:
+            pub = session.query(Publication).filter(Publication.doi == doi).first()
+            if pub:
+                title = pub.title
+        finally:
+            session.close()
+    except Exception:
+        title = None
+
+    if doi and doi.startswith('ieee:issue:'):
+        # Journal issues from the IEEE API have no DOI; their stored URL is the
+        # issue's table of contents on IEEE Xplore.
+        try:
+            from pipeline.models import Publication
+            session = _get_session()
+            try:
+                pub = session.query(Publication).filter(Publication.doi == doi).first()
+                url = pub.url if pub else None
+            finally:
+                session.close()
+        except Exception:
+            url = None
+        if url:
+            return redirect(url, code=302)
+        return redirect('https://ieeexplore.ieee.org/', code=302)
+
+    if doi and '/' in doi:
+        # Read ONLY the first redirect hop from doi.org. Following it onward
+        # would contact the publisher, and Wiley/ACM answer server-side
+        # requests with 403 (bot protection) even though the link is fine.
+        class _NoRedirect(urllib.request.HTTPRedirectHandler):
+            def redirect_request(self, *args, **kwargs):
+                return None
+        try:
+            opener = urllib.request.build_opener(_NoRedirect)
+            req = urllib.request.Request(
+                f'https://doi.org/{doi}',
+                headers={'User-Agent': 'PublisherTitleTracker/1.0'})
+            opener.open(req, timeout=8)
+        except urllib.error.HTTPError as exc:
+            if exc.code in (301, 302, 303, 307, 308):
+                target = exc.headers.get('Location')
+        except Exception:
+            target = None
+
+    if target and 'ieeexplore.ieee.org/xpl/mostRecentIssue.jsp' in target:
+        fallback = (f'https://ieeexplore.ieee.org/search/searchresult.jsp'
+                    f'?queryText={doi}')
+        return redirect(fallback, code=302)
+    if target and target != f'https://doi.org/{doi}':
+        return redirect(target, code=302)
+    if title:
+        from urllib.parse import quote_plus
+        return redirect(
+            f'https://scholar.google.com/scholar?q={quote_plus(title)}', code=302)
+    return redirect(f'https://doi.org/{doi}', code=302)
 
 
 @app.route('/api/cover/<path:isbn>')
@@ -310,6 +412,64 @@ def health():
     return jsonify({'status': 'healthy', 'database': 'not configured (using local files)'})
 
 
+@app.route('/api/publishers')
+def get_publishers():
+    """
+    Tracked publishers with totals, a per-work-type breakdown, how many titles
+    arrived in the last `days` days, and the last successful run time.
+
+    Params:
+      days — window for the "new" count (default 7, max 365)
+    """
+    days = max(1, min(request.args.get('days', default=7, type=int), 365))
+    base = [{'key': p['key'], 'name': p['name'], 'series': p['series']}
+            for p in PUBLISHER_STREAMS]
+    if not _db_available():
+        return jsonify({'publishers': base, 'days': days, 'source': 'config-only'})
+
+    try:
+        since = datetime.utcnow() - timedelta(days=days)
+        session = _get_session()
+        try:
+            totals = {r[0]: r[1] for r in session.execute(text(
+                'SELECT series, COUNT(*) FROM publications GROUP BY series'))}
+            recent = {r[0]: r[1] for r in session.execute(text(
+                'SELECT series, COUNT(*) FROM publications '
+                'WHERE fetched_at >= :since GROUP BY series'), {'since': since})}
+            types = {}
+            for ser, wt, n in session.execute(text(
+                    'SELECT series, work_type, COUNT(*) FROM publications '
+                    'GROUP BY series, work_type')):
+                types.setdefault(ser, {})[wt or 'unknown'] = n
+            try:
+                last_run = {r[0]: r[1] for r in session.execute(text(
+                    'SELECT series, last_success_at FROM pipeline_state'))}
+            except Exception:
+                session.rollback()
+                last_run = {}
+        finally:
+            session.close()
+
+        out = []
+        for p in base:
+            by_type = {}
+            for ser in p['series']:
+                for wt, n in types.get(ser, {}).items():
+                    by_type[wt] = by_type.get(wt, 0) + n
+            last = [last_run[s] for s in p['series'] if s in last_run]
+            out.append({
+                'key':             p['key'],
+                'name':            p['name'],
+                'total':           sum(totals.get(s, 0) for s in p['series']),
+                'new_in_window':   sum(recent.get(s, 0) for s in p['series']),
+                'by_type':         by_type,
+                'last_success_at': max(last).isoformat() if last else None,
+            })
+        return jsonify({'publishers': out, 'days': days, 'source': 'database'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/series')
 def get_series():
     if _db_available():
@@ -341,15 +501,25 @@ def search_publications():
     series = request.args.get('series')
     year   = request.args.get('year', type=int)
     query  = request.args.get('query')
+    publisher = request.args.get('publisher')
+    work_type = request.args.get('type')
     limit  = min(request.args.get('limit', default=100, type=int), 1000)
+
+    publisher_series = None
+    if publisher:
+        publisher_series = _publisher_series(publisher)
+        if publisher_series is None:
+            return jsonify({'error': f'Unknown publisher: {publisher}'}), 400
 
     if _db_available():
         try:
-            results = _search_db(series=series, year=year, query=query, limit=limit)
+            results = _search_db(series=series, year=year, query=query, limit=limit,
+                                 publisher_series=publisher_series, work_type=work_type)
             return jsonify({
                 'results': results,
                 'count':   len(results),
-                'filters': {'series': series, 'year': year, 'query': query},
+                'filters': {'series': series, 'publisher': publisher, 'type': work_type,
+                            'year': year, 'query': query},
                 'source':  'database',
             })
         except Exception as e:
@@ -504,11 +674,20 @@ def get_new_publications():
     Params:
       since  — ISO date (YYYY-MM-DD). Defaults to 7 days ago.
       series — optional series filter (abbreviation or full name)
+      publisher — optional publisher filter (SPRINGER, ELSEVIER, WILEY, IEEE, ACM)
+      type   — optional work type (proceedings, journal-issue, book, ...)
       limit  — max results (default 100, max 1000)
     """
     since_str = request.args.get('since')
     series    = request.args.get('series')
+    publisher = request.args.get('publisher')
+    work_type = request.args.get('type')
     limit     = min(request.args.get('limit', default=100, type=int), 1000)
+    publisher_series = None
+    if publisher:
+        publisher_series = _publisher_series(publisher)
+        if publisher_series is None:
+            return jsonify({'error': f'Unknown publisher: {publisher}'}), 400
 
     if since_str:
         try:
@@ -529,6 +708,10 @@ def get_new_publications():
             if series:
                 full_name = _resolve_series(series)
                 q = q.filter(Publication.series.ilike(f'%{full_name}%'))
+            if publisher_series:
+                q = q.filter(Publication.series.in_(publisher_series))
+            if work_type:
+                q = q.filter(Publication.work_type == work_type)
             q = q.order_by(Publication.fetched_at.desc()).limit(limit)
             results = [pub.to_dict() for pub in q.all()]
         finally:
@@ -552,10 +735,19 @@ def rss_feed():
 
     Params:
       series — optional filter (abbreviation or full name)
+      publisher — optional publisher filter (e.g. WILEY)
+      type   — optional work type (proceedings, journal-issue, book, ...)
       limit  — number of items (default 50, max 200)
     """
     series = request.args.get('series')
+    publisher = request.args.get('publisher')
+    work_type = request.args.get('type')
     limit  = min(request.args.get('limit', default=50, type=int), 200)
+    publisher_series = None
+    if publisher:
+        publisher_series = _publisher_series(publisher)
+        if publisher_series is None:
+            return f'Unknown publisher: {publisher}', 400
 
     if not _db_available():
         return 'Database not configured', 503
@@ -568,6 +760,10 @@ def rss_feed():
             if series:
                 full_name = _resolve_series(series)
                 q = q.filter(Publication.series.ilike(f'%{full_name}%'))
+            if publisher_series:
+                q = q.filter(Publication.series.in_(publisher_series))
+            if work_type:
+                q = q.filter(Publication.work_type == work_type)
             q = q.order_by(Publication.fetched_at.desc()).limit(limit)
 
             # Build RSS items while session is still open so lazy-loaded
@@ -579,6 +775,7 @@ def rss_feed():
                 guid  = xml_escape(f'https://doi.org/{pub.doi}' if pub.doi else pub.title or '')
 
                 desc_parts = []
+                if pub.work_type:        desc_parts.append(f'Type: {pub.work_type}')
                 if pub.series:           desc_parts.append(f'Series: {pub.series}')
                 if pub.year:             desc_parts.append(f'Year: {pub.year}')
                 if pub.event_name:       desc_parts.append(f'Conference: {pub.event_name}')
@@ -605,13 +802,14 @@ def rss_feed():
     except Exception as e:
         return str(e), 500
 
-    feed_title = f'Springer Publications — {series.upper()}' if series else 'Springer Publications'
+    feed_label = (series or publisher or '').upper()
+    feed_title = f'New Publications — {feed_label}' if feed_label else 'New Publications'
     xml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
   <channel>
     <title>{xml_escape(feed_title)}</title>
     <link>{xml_escape(request.host_url)}</link>
-    <description>New Springer book series publications (LNCS, CCIS and more)</description>
+    <description>New titles from tracked academic publishers</description>
     <language>en</language>
 {chr(10).join(items_xml)}
   </channel>
@@ -634,6 +832,8 @@ def get_events():
       since   — ISO datetime/date. Defaults to 7 days ago.
       type    — optional filter: 'title.added' or 'title.updated'
       series  — optional series filter (abbreviation or full name)
+      publisher — optional publisher filter (SPRINGER, ELSEVIER, WILEY, IEEE, ACM)
+      work_type — optional work type (proceedings, journal-issue, book, ...)
       limit   — max results (default 100, max 1000)
 
     Marks returned events as delivered (delivered_at) so end-to-end latency
@@ -642,7 +842,14 @@ def get_events():
     since_str = request.args.get('since')
     ev_type   = request.args.get('type')
     series    = request.args.get('series')
+    publisher = request.args.get('publisher')
+    work_type = request.args.get('work_type') or request.args.get('type_of_work')
     limit     = min(request.args.get('limit', default=100, type=int), 1000)
+    publisher_series = None
+    if publisher:
+        publisher_series = _publisher_series(publisher)
+        if publisher_series is None:
+            return jsonify({'error': f'Unknown publisher: {publisher}'}), 400
 
     if since_str:
         try:
@@ -656,18 +863,31 @@ def get_events():
         return jsonify({'error': 'Database not configured'}), 503
 
     try:
-        from pipeline.models import TitleEvent
+        from pipeline.models import TitleEvent, Publication
         session = _get_session()
         try:
-            q = session.query(TitleEvent).filter(TitleEvent.detected_at >= since)
+            # work_type lives on the publication, not in the (hash-stable) event
+            # payload, so join on DOI (publications.doi is unique -> no fan-out).
+            q = (session.query(TitleEvent, Publication.work_type)
+                 .outerjoin(Publication, Publication.doi == TitleEvent.source_record_id)
+                 .filter(TitleEvent.detected_at >= since))
             if ev_type:
                 q = q.filter(TitleEvent.event_type == ev_type)
             if series:
                 full_name = _resolve_series(series)
                 q = q.filter(TitleEvent.series.ilike(f'%{full_name}%'))
+            if publisher_series:
+                q = q.filter(TitleEvent.series.in_(publisher_series))
+            if work_type:
+                q = q.filter(Publication.work_type == work_type)
             q = q.order_by(TitleEvent.detected_at.desc()).limit(limit)
-            events = q.all()
-            results = [ev.to_dict() for ev in events]
+            rows = q.all()
+            events = [r[0] for r in rows]
+            results = []
+            for ev, wt in rows:
+                d = ev.to_dict()
+                d['work_type'] = wt
+                results.append(d)
 
             # Mark as delivered (best-effort; never fails the request).
             now = datetime.utcnow()
@@ -696,10 +916,17 @@ def events_atom_feed():
 
     Params:
       series — optional filter (abbreviation or full name)
+      publisher — optional publisher filter (e.g. IEEE)
       limit  — number of entries (default 50, max 200)
     """
     series = request.args.get('series')
+    publisher = request.args.get('publisher')
     limit  = min(request.args.get('limit', default=50, type=int), 200)
+    publisher_series = None
+    if publisher:
+        publisher_series = _publisher_series(publisher)
+        if publisher_series is None:
+            return f'Unknown publisher: {publisher}', 400
 
     if not _db_available():
         return 'Database not configured', 503
@@ -712,6 +939,8 @@ def events_atom_feed():
             if series:
                 full_name = _resolve_series(series)
                 q = q.filter(TitleEvent.series.ilike(f'%{full_name}%'))
+            if publisher_series:
+                q = q.filter(TitleEvent.series.in_(publisher_series))
             q = q.order_by(TitleEvent.detected_at.desc()).limit(limit)
             events = q.all()
 
@@ -739,7 +968,8 @@ def events_atom_feed():
     except Exception as e:
         return str(e), 500
 
-    feed_title = f'Springer Title Events — {series.upper()}' if series else 'Springer Title Events'
+    feed_label = (series or publisher or '').upper()
+    feed_title = f'Title Events — {feed_label}' if feed_label else 'Title Events'
     xml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
   <title>{xml_escape(feed_title)}</title>
@@ -758,12 +988,13 @@ def events_atom_feed():
 if __name__ == '__main__':
     backend = 'Neon (DATABASE_URL)' if _db_available() else 'local JSON files'
     print("=" * 60)
-    print("Springer Publications API")
+    print("Publisher Title Tracker API")
     print(f"Backend: {backend}")
     print("Series map loaded:", list(SERIES_MAP.keys()))
     print("=" * 60)
     print("Endpoints:")
     print("  GET /health")
+    print("  GET /api/publishers")
     print("  GET /api/series")
     print("  GET /api/publications?series=LNCS&year=2024&query=machine")
     print("  GET /api/publications/recent")

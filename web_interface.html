@@ -1,862 +1,258 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Springer Publications Browser</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            overflow: hidden;
-        }
-
-        /* ── Header ── */
-        header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }
-        header h1 { font-size: 2.5em; margin-bottom: 10px; }
-        header p  { font-size: 1.1em; opacity: 0.9; }
-
-        /* ── Tabs ── */
-        .tabs {
-            display: flex;
-            background: #f8f9fa;
-            border-bottom: 2px solid #e9ecef;
-        }
-        .tab-btn {
-            flex: 1;
-            padding: 16px;
-            border: none;
-            background: transparent;
-            font-size: 1em;
-            font-weight: 600;
-            color: #6c757d;
-            cursor: pointer;
-            border-bottom: 3px solid transparent;
-            transition: all 0.2s;
-        }
-        .tab-btn.active {
-            color: #667eea;
-            border-bottom-color: #667eea;
-            background: white;
-        }
-        .tab-btn:hover:not(.active) { background: #e9ecef; }
-
-        .tab-panel { display: none; }
-        .tab-panel.active { display: block; }
-
-        /* ── Summary bar ── */
-        .summary-bar {
-            display: flex;
-            justify-content: space-around;
-            padding: 20px 30px;
-            background: white;
-            border-bottom: 1px solid #e9ecef;
-        }
-        .sum-card { text-align: center; }
-        .sum-number {
-            font-size: 2em;
-            font-weight: bold;
-            color: #667eea;
-        }
-        .sum-label { color: #6c757d; font-size: 0.85em; margin-top: 2px; }
-
-        /* ── Browse tab ── */
-        .search-section {
-            padding: 30px;
-            background: #f8f9fa;
-            border-bottom: 2px solid #e9ecef;
-        }
-        .search-form {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 15px;
-        }
-        .form-group { display: flex; flex-direction: column; }
-        label {
-            font-weight: 600;
-            margin-bottom: 5px;
-            color: #495057;
-            font-size: 0.9em;
-        }
-        input, select {
-            padding: 10px;
-            border: 2px solid #dee2e6;
-            border-radius: 8px;
-            font-size: 1em;
-            transition: border-color 0.3s;
-        }
-        input:focus, select:focus { outline: none; border-color: #667eea; }
-
-        .button-group { display: flex; gap: 10px; flex-wrap: wrap; }
-        button {
-            padding: 12px 30px;
-            border: none;
-            border-radius: 8px;
-            font-size: 1em;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102,126,234,0.4);
-        }
-        .btn-secondary { background: #6c757d; color: white; }
-        .btn-secondary:hover { background: #5a6268; }
-
-        .results { padding: 30px; }
-
-        .publication {
-            display: flex;
-            gap: 20px;
-            background: white;
-            border: 1px solid #e9ecef;
-            padding: 20px;
-            margin-bottom: 15px;
-            border-radius: 10px;
-            transition: all 0.25s;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-        }
-        .publication:hover {
-            box-shadow: 0 6px 20px rgba(0,0,0,0.1);
-            transform: translateY(-2px);
-        }
-
-        /* Thumbnail */
-        .pub-cover {
-            flex-shrink: 0;
-            width: 90px;
-        }
-        .pub-cover img {
-            width: 90px;
-            height: 126px;
-            object-fit: cover;
-            border-radius: 4px;
-            box-shadow: 2px 4px 10px rgba(0,0,0,0.2);
-            display: block;
-        }
-        .cover-placeholder {
-            width: 90px;
-            height: 126px;
-            border-radius: 4px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.7em;
-            font-weight: 700;
-            color: white;
-            text-align: center;
-            padding: 6px;
-            box-shadow: 2px 4px 10px rgba(0,0,0,0.2);
-            line-height: 1.3;
-        }
-
-        /* Content */
-        .pub-content { flex: 1; min-width: 0; }
-        .pub-title {
-            font-size: 1.1em;
-            font-weight: 700;
-            color: #212529;
-            margin-bottom: 6px;
-            line-height: 1.4;
-        }
-        .pub-authors {
-            color: #6c757d;
-            margin-bottom: 10px;
-            font-style: italic;
-            font-size: 0.9em;
-        }
-
-        /* Badge row */
-        .pub-badges { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; align-items: center; }
-        .badge-group { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
-        .badge-label { font-size: 0.7em; color: #6c757d; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
-        .badge {
-            display: inline-block;
-            padding: 3px 10px;
-            border-radius: 20px;
-            font-size: 0.8em;
-            font-weight: 600;
-        }
-        .badge-series { background: #eef0ff; color: #4c5aef; border: 1px solid #c5cbfa; }
-        .badge-year   { background: #e6f9ed; color: #1a7f3c; border: 1px solid #a3e0b8; }
-        .badge-event  { background: #fff4e6; color: #c05c00; border: 1px solid #ffc97a; }
-
-        /* Conference info row */
-        .pub-event {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 16px;
-            font-size: 0.85em;
-            color: #495057;
-            margin-bottom: 8px;
-        }
-        .pub-event-item { display: flex; align-items: center; gap: 5px; }
-        .pub-event-icon { font-size: 1em; }
-
-        .pub-link     { color: #667eea; text-decoration: none; font-size: 0.85em; font-weight: 600; }
-        .pub-link:hover { text-decoration: underline; }
-
-        /* ── Analytics tab ── */
-        .analytics { padding: 30px; }
-        .analytics h2 { margin-bottom: 20px; color: #212529; font-size: 1.4em; }
-
-        /* Series cards */
-        .series-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-            gap: 16px;
-            margin-bottom: 40px;
-        }
-        .series-card {
-            background: #f8f9fa;
-            border: 1px solid #e9ecef;
-            border-radius: 12px;
-            padding: 20px;
-            border-top: 4px solid #667eea;
-            transition: box-shadow 0.2s;
-        }
-        .series-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
-        .series-card h3 { font-size: 0.9em; color: #667eea; font-weight: 700; margin-bottom: 12px; }
-        .series-card .big  { font-size: 1.8em; font-weight: bold; color: #212529; }
-        .series-card .sub  { font-size: 0.8em; color: #6c757d; margin-top: 2px; }
-        .series-metrics { display: flex; gap: 16px; margin-top: 12px; }
-        .series-metric { text-align: center; flex: 1; }
-
-        /* Chart section */
-        .chart-section { margin-bottom: 40px; }
-        .chart-controls {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 16px;
-            flex-wrap: wrap;
-        }
-        .chart-controls label { margin: 0; font-weight: 600; color: #495057; }
-        .chart-controls select { padding: 8px 12px; font-size: 0.9em; width: auto; }
-        .chart-wrapper {
-            background: #f8f9fa;
-            border-radius: 12px;
-            padding: 20px;
-            border: 1px solid #e9ecef;
-        }
-
-        /* Authors table */
-        .authors-section { margin-bottom: 40px; }
-        .authors-controls {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 16px;
-            flex-wrap: wrap;
-        }
-        .authors-controls label { margin: 0; font-weight: 600; color: #495057; }
-        .authors-controls select { padding: 8px 12px; font-size: 0.9em; width: auto; }
-
-        .authors-table { width: 100%; border-collapse: collapse; }
-        .authors-table th {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 12px 16px;
-            text-align: left;
-            font-size: 0.9em;
-        }
-        .authors-table th:last-child { text-align: right; }
-        .authors-table td { padding: 10px 16px; border-bottom: 1px solid #e9ecef; font-size: 0.9em; }
-        .authors-table td:last-child { text-align: right; font-weight: 600; color: #667eea; }
-        .authors-table tr:hover td { background: #f8f9fa; }
-        .rank-badge {
-            display: inline-block;
-            width: 24px;
-            height: 24px;
-            line-height: 24px;
-            text-align: center;
-            border-radius: 50%;
-            font-size: 0.75em;
-            font-weight: 700;
-            background: #e9ecef;
-            color: #495057;
-        }
-        .rank-1 { background: #ffd700; color: #856404; }
-        .rank-2 { background: #c0c0c0; color: #495057; }
-        .rank-3 { background: #cd7f32; color: white; }
-
-        /* Quality table */
-        .quality-table { width: 100%; border-collapse: collapse; }
-        .quality-table th {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white; padding: 12px 16px;
-            text-align: left; font-size: 0.9em;
-        }
-        .quality-table th:not(:first-child) { text-align: center; }
-        .quality-table td { padding: 10px 16px; border-bottom: 1px solid #e9ecef; font-size: 0.9em; }
-        .quality-table td:not(:first-child) { text-align: center; }
-        .quality-table tr:hover td { background: #f8f9fa; }
-        .q-bar-wrap { display: flex; align-items: center; gap: 8px; justify-content: center; }
-        .q-bar { height: 8px; border-radius: 4px; background: #e9ecef; width: 80px; overflow: hidden; }
-        .q-fill { height: 100%; border-radius: 4px; }
-        .q-green  { background: #28a745; }
-        .q-orange { background: #fd7e14; }
-        .q-red    { background: #dc3545; }
-
-        /* Shared utility */
-        .loading { text-align: center; padding: 40px; color: #6c757d; }
-        .error {
-            background: #f8d7da; color: #721c24;
-            padding: 15px; border-radius: 8px;
-            border-left: 4px solid #dc3545;
-        }
-        .empty { text-align: center; padding: 40px; color: #6c757d; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Publisher Title Tracker</title>
+<style>
+  body { font-family: Arial, Helvetica, sans-serif; font-size: 15px; color: #222;
+         max-width: 1000px; margin: 0 auto; padding: 16px; line-height: 1.4; }
+  h1 { font-size: 24px; margin: 0 0 4px 0; }
+  h2 { font-size: 18px; margin: 28px 0 8px 0; border-bottom: 1px solid #ccc; padding-bottom: 4px; }
+  p.sub { margin: 0 0 12px 0; color: #555; }
+  nav { margin: 12px 0; padding: 6px 0; border-top: 1px solid #ccc; border-bottom: 1px solid #ccc; }
+  nav a { margin-right: 16px; }
+  a { color: #0645ad; }
+  table { border-collapse: collapse; width: 100%; margin: 8px 0; }
+  th, td { border: 1px solid #ccc; padding: 5px 8px; text-align: left; vertical-align: top; }
+  th { background: #f1f1f1; }
+  td.num { text-align: right; }
+  form { margin: 8px 0; }
+  label { margin-right: 12px; white-space: nowrap; }
+  select, input { font-size: 14px; padding: 2px 4px; }
+  button { font-size: 14px; padding: 3px 10px; }
+  .note { color: #555; font-size: 13px; }
+  .error { color: #b00020; }
+  .small { font-size: 13px; color: #555; }
+  footer { margin-top: 32px; padding-top: 8px; border-top: 1px solid #ccc; }
+</style>
 </head>
 <body>
-<div class="container">
 
-    <header>
-        <h1>Springer Publications Browser</h1>
-        <p>Conference Proceedings Metadata — 8 Series from CrossRef</p>
-    </header>
+<h1>Publisher Title Tracker</h1>
+<p class="sub">New and updated titles (proceedings, journal issues, books) from Springer, Elsevier,
+Wiley, IEEE and ACM, collected from CrossRef at regular intervals.</p>
 
-    <!-- Summary bar (always visible) -->
-    <div class="summary-bar" id="summaryBar">
-        <div class="sum-card">
-            <div class="sum-number" id="sumPubs">—</div>
-            <div class="sum-label">Publications</div>
-        </div>
-        <div class="sum-card">
-            <div class="sum-number" id="sumAuthors">—</div>
-            <div class="sum-label">Authors</div>
-        </div>
-        <div class="sum-card">
-            <div class="sum-number" id="sumSeries">—</div>
-            <div class="sum-label">Series</div>
-        </div>
-        <div class="sum-card">
-            <div class="sum-number" id="sumYears">—</div>
-            <div class="sum-label">Year Range</div>
-        </div>
-    </div>
+<nav>
+  <a href="#publishers">Publishers</a>
+  <a href="#new">New titles</a>
+  <a href="#browse">Browse and search</a>
+  <a href="#feeds">Feeds and API</a>
+</nav>
 
-    <!-- Tab navigation -->
-    <div class="tabs">
-        <button class="tab-btn active" onclick="switchTab('browse')">Browse Publications</button>
-        <button class="tab-btn"        onclick="switchTab('analytics')">Analytics</button>
-    </div>
+<h2 id="publishers">Publishers</h2>
+<p class="note">Titles stored per publisher, and how many arrived in the chosen period.</p>
+<form onsubmit="loadPublishers(); return false;">
+  <label>New in the last
+    <select id="pubDays">
+      <option value="1">1 day</option>
+      <option value="7" selected>7 days</option>
+      <option value="30">30 days</option>
+    </select>
+  </label>
+  <button type="submit">Update</button>
+</form>
+<div id="publishersBox">Loading...</div>
 
-    <!-- ── BROWSE TAB ── -->
-    <div class="tab-panel active" id="tab-browse">
-        <div class="search-section">
-            <div class="search-form">
-                <div class="form-group">
-                    <label for="series">Series:</label>
-                    <select id="series">
-                        <option value="">All Series</option>
-                        <option value="LNCS">LNCS — Lecture Notes in Computer Science</option>
-                        <option value="LNAI">LNAI — Lecture Notes in Artificial Intelligence</option>
-                        <option value="LNBI">LNBI — Lecture Notes in Bioinformatics</option>
-                        <option value="CCIS">CCIS — Communications in Computer and Information Science</option>
-                        <option value="IFIP AICT">IFIP AICT — IFIP Advances in ICT</option>
-                        <option value="LNEE">LNEE — Lecture Notes in Electrical Engineering</option>
-                        <option value="LNNS">LNNS — Lecture Notes in Networks and Systems</option>
-                        <option value="AISC">AISC — Advances in Intelligent Systems and Computing</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="year">Year:</label>
-                    <input type="number" id="year" placeholder="e.g., 2024" min="1970" max="2026">
-                </div>
-                <div class="form-group">
-                    <label for="query">Search Title:</label>
-                    <input type="text" id="query" placeholder="e.g., machine learning">
-                </div>
-                <div class="form-group">
-                    <label for="limit">Results Limit:</label>
-                    <select id="limit">
-                        <option value="50">50</option>
-                        <option value="100" selected>100</option>
-                        <option value="200">200</option>
-                        <option value="500">500</option>
-                    </select>
-                </div>
-            </div>
-            <div class="button-group">
-                <button class="btn-primary"   onclick="searchPublications()">Search</button>
-                <button class="btn-secondary" onclick="loadRecent()">Recent</button>
-            </div>
-        </div>
-        <div class="results" id="results">
-            <div class="empty">Use the filters above to search publications, or click Recent.</div>
-        </div>
-    </div>
+<h2 id="new">New titles</h2>
+<p class="note">Change events: a title is <b>added</b> when it is seen for the first time and
+<b>updated</b> when its metadata changes later.</p>
+<form onsubmit="loadEvents(); return false;">
+  <label>Publisher <select id="evPublisher"><option value="">All</option></select></label>
+  <label>Type <select id="evWorkType"></select></label>
+  <label>Event
+    <select id="evType">
+      <option value="">All</option>
+      <option value="title.added">Added</option>
+      <option value="title.updated">Updated</option>
+    </select>
+  </label>
+  <label>Period
+    <select id="evDays">
+      <option value="1">Last day</option>
+      <option value="7" selected>Last 7 days</option>
+      <option value="30">Last 30 days</option>
+      <option value="365">Last year</option>
+    </select>
+  </label>
+  <button type="submit">Show</button>
+</form>
+<div id="eventsBox">Loading...</div>
 
-    <!-- ── ANALYTICS TAB ── -->
-    <div class="tab-panel" id="tab-analytics">
-        <div class="analytics">
+<h2 id="browse">Browse and search</h2>
+<form onsubmit="searchPublications(); return false;">
+  <label>Publisher <select id="pPublisher"><option value="">All</option></select></label>
+  <label>Type <select id="pWorkType"></select></label>
+  <label>Year <input type="number" id="pYear" min="1970" max="2100" style="width:70px"></label>
+  <label>Title contains <input type="text" id="pQuery" style="width:180px"></label>
+  <label>Show
+    <select id="pLimit">
+      <option value="25">25</option>
+      <option value="50" selected>50</option>
+      <option value="100">100</option>
+      <option value="500">500</option>
+    </select>
+  </label>
+  <button type="submit">Search</button>
+</form>
+<div id="resultsBox">Use the form above to search.</div>
 
-            <!-- Series cards -->
-            <h2>Series Overview</h2>
-            <div class="series-grid" id="seriesGrid">
-                <div class="loading">Loading series data...</div>
-            </div>
+<h2 id="feeds">Feeds and API</h2>
+<p>Subscribe in a feed reader to get new titles without visiting this page.
+Add <code>?publisher=WILEY</code> (or SPRINGER, ELSEVIER, IEEE, ACM) to limit a feed to one publisher.</p>
+<ul>
+  <li><a href="/feed/events.atom">Atom feed of change events</a></li>
+  <li><a href="/feed.rss">RSS feed of newly added titles</a></li>
+</ul>
+<p>JSON endpoints:</p>
+<ul>
+  <li><code>/api/publishers</code> &ndash; overview per publisher</li>
+  <li><code>/api/events?since=YYYY-MM-DD&amp;publisher=&amp;work_type=&amp;type=title.added</code> &ndash; change events</li>
+  <li><code>/api/publications?publisher=&amp;type=&amp;year=&amp;query=&amp;limit=</code> &ndash; search</li>
+  <li><code>/api/publications/new?since=YYYY-MM-DD&amp;publisher=</code> &ndash; titles added since a date</li>
+</ul>
 
-            <!-- Trend chart -->
-            <div class="chart-section">
-                <h2>Publication Trends</h2>
-                <div class="chart-controls">
-                    <label for="trendSeries">Series:</label>
-                    <select id="trendSeries" onchange="loadTrends()">
-                        <option value="">All Series</option>
-                        <option value="LNCS">LNCS</option>
-                        <option value="LNAI">LNAI</option>
-                        <option value="CCIS">CCIS</option>
-                        <option value="IFIP AICT">IFIP AICT</option>
-                        <option value="LNEE">LNEE</option>
-                        <option value="LNNS">LNNS</option>
-                        <option value="AISC">AISC</option>
-                    </select>
-                </div>
-                <div class="chart-wrapper">
-                    <canvas id="trendsChart" height="100"></canvas>
-                </div>
-            </div>
-
-            <!-- Data quality -->
-            <div class="quality-section" style="margin-bottom:40px">
-                <h2>Data Quality</h2>
-                <p style="color:#6c757d;margin-bottom:16px;font-size:0.9em">
-                    Coverage percentages show what proportion of records have each field populated.
-                    Computed automatically after every scrape.
-                </p>
-                <div id="qualityTable"><div class="loading">Loading quality metrics...</div></div>
-            </div>
-
-            <!-- Top authors -->
-            <div class="authors-section">
-                <h2>Top Authors</h2>
-                <div class="authors-controls">
-                    <label for="authorSeries">Series:</label>
-                    <select id="authorSeries" onchange="loadAuthors()">
-                        <option value="">All Series</option>
-                        <option value="LNCS">LNCS</option>
-                        <option value="LNAI">LNAI</option>
-                        <option value="CCIS">CCIS</option>
-                        <option value="IFIP AICT">IFIP AICT</option>
-                        <option value="LNEE">LNEE</option>
-                        <option value="LNNS">LNNS</option>
-                        <option value="AISC">AISC</option>
-                    </select>
-                    <label for="authorLimit">Show:</label>
-                    <select id="authorLimit" onchange="loadAuthors()">
-                        <option value="10">Top 10</option>
-                        <option value="20" selected>Top 20</option>
-                        <option value="50">Top 50</option>
-                    </select>
-                </div>
-                <div id="authorsTable"><div class="loading">Loading authors...</div></div>
-            </div>
-
-        </div>
-    </div>
-
-</div><!-- /container -->
+<footer class="small">
+  Data source: CrossRef. &ldquo;New&rdquo; means newly registered in CrossRef, which can be later than the
+  publisher&rsquo;s own announcement.
+</footer>
 
 <script>
-const API = ''; // relative URL — works both locally and on Render
-
-// Colour palette for chart lines
-const PALETTE = [
-    '#667eea','#764ba2','#f093fb','#f5576c',
-    '#4facfe','#00f2fe','#43e97b','#fa709a'
+const API = '';   // same origin
+const WORK_TYPES = [
+  ['', 'All'], ['proceedings', 'Proceedings'], ['journal-issue', 'Journal issue'],
+  ['journal', 'Journal'], ['book', 'Book'], ['edited-book', 'Edited book'],
+  ['monograph', 'Monograph']
 ];
 
-// ── Tab switching ──────────────────────────────────────────────
-function switchTab(name) {
-    document.querySelectorAll('.tab-btn').forEach((b,i) => {
-        b.classList.toggle('active', ['browse','analytics'][i] === name);
+// Titles and names come from external metadata, so never insert them as HTML.
+function esc(v) {
+  return String(v === null || v === undefined ? '' : v)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+function day(iso) { return iso ? String(iso).slice(0, 10) : ''; }
+function doiLink(doi, text) {
+  return doi ? `<a href="${API}/api/doi/${encodeURIComponent(doi)}" target="_blank" rel="noopener">${esc(text || doi)}</a>`
+             : esc(text);
+}
+async function getJSON(url) {
+  const r = await fetch(API + url);
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.error || r.statusText);
+  return d;
+}
+function showError(boxId, e) {
+  document.getElementById(boxId).innerHTML = `<p class="error">Could not load data: ${esc(e.message)}</p>`;
+}
+function fillWorkTypes(id) {
+  document.getElementById(id).innerHTML =
+    WORK_TYPES.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
+}
+function sinceDate(days) {
+  return new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
+}
+
+// ---- Publishers overview ----
+let publisherList = [];
+
+async function loadPublishers() {
+  const days = document.getElementById('pubDays').value;
+  try {
+    const d = await getJSON(`/api/publishers?days=${days}`);
+    publisherList = d.publishers;
+    fillPublisherSelects();
+    let html = `<table><tr><th>Publisher</th><th>Titles stored</th><th>New in last ${esc(days)} day(s)</th>
+                <th>By type</th><th>Last successful run (UTC)</th></tr>`;
+    d.publishers.forEach(p => {
+      const types = Object.entries(p.by_type || {})
+        .map(([t, n]) => `${esc(t)}: ${n.toLocaleString()}`).join(', ') || '-';
+      html += `<tr><td>${esc(p.name)}</td>
+        <td class="num">${(p.total || 0).toLocaleString()}</td>
+        <td class="num">${(p.new_in_window || 0).toLocaleString()}</td>
+        <td>${types}</td>
+        <td>${p.last_success_at ? esc(p.last_success_at.replace('T', ' ').slice(0, 16)) : 'not run yet'}</td></tr>`;
     });
-    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-    document.getElementById('tab-' + name).classList.add('active');
-
-    if (name === 'analytics') initAnalytics();
+    document.getElementById('publishersBox').innerHTML = html + '</table>';
+  } catch (e) { showError('publishersBox', e); }
 }
 
-// ── Summary bar ────────────────────────────────────────────────
-async function loadSummary() {
-    try {
-        const r = await fetch(`${API}/api/stats`);
-        const d = await r.json();
-        document.getElementById('sumPubs').textContent    = d.total_publications.toLocaleString();
-        document.getElementById('sumAuthors').textContent = (d.total_authors || 0).toLocaleString();
-        document.getElementById('sumSeries').textContent  = d.total_series;
-        document.getElementById('sumYears').textContent   =
-            `${d.year_range.earliest}–${d.year_range.latest}`;
-    } catch(e) {
-        console.warn('Could not load summary', e);
+function fillPublisherSelects() {
+  ['evPublisher', 'pPublisher'].forEach(id => {
+    const sel = document.getElementById(id);
+    const current = sel.value;
+    sel.innerHTML = '<option value="">All</option>' +
+      publisherList.map(p => `<option value="${esc(p.key)}">${esc(p.name)}</option>`).join('');
+    sel.value = current;
+  });
+}
+
+// ---- Change events ----
+async function loadEvents() {
+  const params = new URLSearchParams();
+  params.set('since', sinceDate(document.getElementById('evDays').value));
+  params.set('limit', '200');
+  const pub = document.getElementById('evPublisher').value;
+  const wt = document.getElementById('evWorkType').value;
+  const et = document.getElementById('evType').value;
+  if (pub) params.set('publisher', pub);
+  if (wt) params.set('work_type', wt);
+  if (et) params.set('type', et);
+  try {
+    const d = await getJSON('/api/events?' + params);
+    if (!d.results.length) {
+      document.getElementById('eventsBox').innerHTML = '<p>No events for this selection.</p>';
+      return;
     }
+    let html = `<p class="small">${d.count} event(s)${d.count >= 200 ? ' (showing the latest 200)' : ''}</p>
+      <table><tr><th>Detected</th><th>Event</th><th>Publisher</th><th>Type</th><th>Title</th></tr>`;
+    d.results.forEach(ev => {
+      const title = (ev.payload && ev.payload.title) || ev.doi;
+      html += `<tr><td>${esc(day(ev.detected_at))}</td>
+        <td>${ev.event_type === 'title.added' ? 'added' : 'updated'}</td>
+        <td>${esc(ev.publisher || '')}</td>
+        <td>${esc(ev.work_type || '')}</td>
+        <td>${doiLink(ev.doi, title)}</td></tr>`;
+    });
+    document.getElementById('eventsBox').innerHTML = html + '</table>';
+  } catch (e) { showError('eventsBox', e); }
 }
 
-// ── Browse tab ─────────────────────────────────────────────────
+// ---- Search ----
 async function searchPublications() {
-    const params = new URLSearchParams();
-    const s = document.getElementById('series').value;
-    const y = document.getElementById('year').value;
-    const q = document.getElementById('query').value;
-    const l = document.getElementById('limit').value;
-    if (s) params.append('series', s);
-    if (y) params.append('year', y);
-    if (q) params.append('query', q);
-    if (l) params.append('limit', l);
-
-    showLoading('results');
-    try {
-        const r = await fetch(`${API}/api/publications?${params}`);
-        const d = await r.json();
-        renderPublications(d.results, d.count);
-    } catch(e) {
-        showError('results', 'Failed to connect to API. Make sure the server is running on port 5000.');
+  const params = new URLSearchParams();
+  const f = { publisher: 'pPublisher', type: 'pWorkType', year: 'pYear',
+              query: 'pQuery', limit: 'pLimit' };
+  Object.entries(f).forEach(([k, id]) => {
+    const v = document.getElementById(id).value.trim();
+    if (v) params.set(k, v);
+  });
+  document.getElementById('resultsBox').textContent = 'Loading...';
+  try {
+    const d = await getJSON('/api/publications?' + params);
+    if (!d.results.length) {
+      document.getElementById('resultsBox').innerHTML = '<p>No titles found.</p>';
+      return;
     }
-}
-
-async function loadRecent() {
-    showLoading('results');
-    try {
-        const r = await fetch(`${API}/api/publications/recent?limit=100`);
-        const d = await r.json();
-        renderPublications(d.results, d.count);
-    } catch(e) {
-        showError('results', 'Failed to load recent publications.');
-    }
-}
-
-// Series colour map for cover placeholders
-const SERIES_COLORS = {
-    'lecture notes in computer science': '#1a6eb5',
-    'lecture notes in artificial intelligence': '#6f42c1',
-    'lecture notes in bioinformatics': '#20a884',
-    'communications in computer and information science': '#e05d1a',
-    'ifip advances in information and communication technology': '#c0392b',
-    'lecture notes in electrical engineering': '#2980b9',
-    'lecture notes in networks and systems': '#16a085',
-    'advances in intelligent systems and computing': '#8e44ad',
-};
-function seriesColor(name) {
-    return SERIES_COLORS[(name || '').toLowerCase()] || '#667eea';
-}
-function seriesAbbr(name) {
-    if (!name) return '?';
-    const map = {
-        'lecture notes in computer science': 'LNCS',
-        'lecture notes in artificial intelligence': 'LNAI',
-        'lecture notes in bioinformatics': 'LNBI',
-        'communications in computer and information science': 'CCIS',
-        'ifip advances in information and communication technology': 'IFIP\nAICT',
-        'lecture notes in electrical engineering': 'LNEE',
-        'lecture notes in networks and systems': 'LNNS',
-        'advances in intelligent systems and computing': 'AISC',
-    };
-    return map[(name || '').toLowerCase()] || name.slice(0, 4).toUpperCase();
-}
-
-function renderPublications(pubs, count) {
-    const el = document.getElementById('results');
-    if (!pubs || !pubs.length) {
-        el.innerHTML = '<div class="empty">No publications found. Try different search criteria.</div>';
-        return;
-    }
-    let html = `<p style="color:#6c757d;margin-bottom:20px;font-size:0.95em">Found <strong>${count}</strong> publication(s)</p>`;
-    pubs.forEach(pub => {
-        const authors = Array.isArray(pub.authors)
-            ? pub.authors.map(a => a.name || a).join(', ')
-            : pub.authors || '';
-
-        // Springer book DOIs are always 10.1007/{ISBN-with-dashes}
-        // Extract the ISBN from the DOI — more reliable than the raw isbn field
-        // which CrossRef returns without dashes (e.g. 9783319075921 vs 978-3-319-07593-8)
-        const isbnFromDoi = pub.doi ? pub.doi.replace(/^10\.\d{4}\//, '') : '';
-        const coverIsbn   = isbnFromDoi.startsWith('978') ? isbnFromDoi : '';
-        const color = seriesColor(pub.series);
-        const abbr  = seriesAbbr(pub.series).replace('\n', '<br>');
-        const placeholder = `<div class='cover-placeholder' style='background:${color}'>${abbr}<br><span style='font-size:0.85em;opacity:0.8;margin-top:4px'>Springer</span></div>`;
-        const coverHtml = coverIsbn
-            ? `<img src="/api/cover/${coverIsbn}" alt="cover" onerror="this.outerHTML=\`${placeholder}\`">`
-            : placeholder;
-
-        // Badges — each has a small label above so users know what they mean
-        const seriesBadge = `
-            <div class="badge-group">
-                <span class="badge-label">Series</span>
-                <span class="badge badge-series">${pub.series || 'Unknown'}</span>
-            </div>`;
-        const yearBadge = pub.year ? `
-            <div class="badge-group">
-                <span class="badge-label">Published</span>
-                <span class="badge badge-year">${pub.year}</span>
-            </div>` : '';
-        const eventDateBadge = pub.event_date_start ? `
-            <div class="badge-group">
-                <span class="badge-label">Conference Date</span>
-                <span class="badge badge-event">${pub.event_date_start}${pub.event_date_end ? ' → ' + pub.event_date_end : ''}</span>
-            </div>` : '';
-
-        // Conference name + location row
-        const eventRow = (pub.event_name || pub.event_location) ? `
-            <div class="pub-event">
-                ${pub.event_name     ? `<span class="pub-event-item"><span class="pub-event-icon">🎓</span>${pub.event_name}</span>` : ''}
-                ${pub.event_location ? `<span class="pub-event-item"><span class="pub-event-icon">📍</span>${pub.event_location}</span>` : ''}
-                ${pub.volume         ? `<span class="pub-event-item"><span class="pub-event-icon">📖</span>Vol. ${pub.volume}</span>` : ''}
-            </div>` : '';
-
-        html += `
-            <div class="publication">
-                <div class="pub-cover">${coverHtml}</div>
-                <div class="pub-content">
-                    <div class="pub-title">${pub.title}</div>
-                    ${authors ? `<div class="pub-authors">Editors: ${authors}</div>` : ''}
-                    <div class="pub-badges">${seriesBadge}${yearBadge}${eventDateBadge}</div>
-                    ${eventRow}
-                    ${pub.doi ? `<a href="https://doi.org/${pub.doi}" target="_blank" class="pub-link">&#128279; doi.org/${pub.doi}</a>` : ''}
-                </div>
-            </div>`;
+    let html = `<p class="small">${d.count} title(s)</p>
+      <table><tr><th>Year</th><th>Publisher</th><th>Type</th><th>Title</th>
+      <th>Series / venue</th><th>Authors or editors</th></tr>`;
+    d.results.forEach(p => {
+      const names = (p.authors || []).slice(0, 3).map(a => a.name).join('; ') +
+                    ((p.authors || []).length > 3 ? ' et al.' : '');
+      const venue = p.event_name ? `${p.series || ''} (${p.event_name})` : (p.series || '');
+      html += `<tr><td>${esc(p.year || '')}</td><td>${esc(p.publisher || '')}</td>
+        <td>${esc(p.work_type || '')}</td><td>${doiLink(p.doi, p.title)}</td>
+        <td>${esc(venue)}</td><td>${esc(names)}</td></tr>`;
     });
-    el.innerHTML = html;
+    document.getElementById('resultsBox').innerHTML = html + '</table>';
+  } catch (e) { showError('resultsBox', e); }
 }
 
-// ── Analytics tab ──────────────────────────────────────────────
-let analyticsLoaded = false;
-let trendsChartInstance = null;
-
-function initAnalytics() {
-    if (analyticsLoaded) return;
-    analyticsLoaded = true;
-    loadSeriesCards();
-    loadTrends();
-    loadQuality();
-    loadAuthors();
-}
-
-// Series cards
-async function loadSeriesCards() {
-    try {
-        const r = await fetch(`${API}/api/gold/stats`);
-        const d = await r.json();
-        const grid = document.getElementById('seriesGrid');
-        if (!d.stats || !d.stats.length) {
-            grid.innerHTML = '<div class="empty">No series data available.</div>';
-            return;
-        }
-        grid.innerHTML = d.stats.map(s => `
-            <div class="series-card">
-                <h3>${s.series}</h3>
-                <div class="big">${s.total_publications.toLocaleString()}</div>
-                <div class="sub">publications</div>
-                <div class="series-metrics">
-                    <div class="series-metric">
-                        <div style="font-weight:600">${s.total_unique_authors.toLocaleString()}</div>
-                        <div class="sub">authors</div>
-                    </div>
-                    <div class="series-metric">
-                        <div style="font-weight:600">${s.year_min}–${s.year_max}</div>
-                        <div class="sub">years</div>
-                    </div>
-                    <div class="series-metric">
-                        <div style="font-weight:600">${s.avg_authors_per_paper}</div>
-                        <div class="sub">avg authors</div>
-                    </div>
-                </div>
-            </div>`).join('');
-    } catch(e) {
-        document.getElementById('seriesGrid').innerHTML =
-            `<div class="error">Failed to load series data: ${e.message}</div>`;
-    }
-}
-
-// Trend chart
-async function loadTrends() {
-    const series = document.getElementById('trendSeries').value;
-    const url = series
-        ? `${API}/api/gold/trends?series=${encodeURIComponent(series)}`
-        : `${API}/api/gold/trends`;
-
-    try {
-        const r = await fetch(url);
-        const d = await r.json();
-
-        // Group by series → { seriesName: { year: count } }
-        const grouped = {};
-        d.trends.forEach(row => {
-            if (!grouped[row.series]) grouped[row.series] = {};
-            grouped[row.series][row.year] = row.publication_count;
-        });
-
-        // Collect all years
-        const allYears = [...new Set(d.trends.map(r => r.year))].sort();
-
-        const datasets = Object.entries(grouped).map(([name, byYear], i) => ({
-            label: name,
-            data: allYears.map(y => byYear[y] || 0),
-            borderColor: PALETTE[i % PALETTE.length],
-            backgroundColor: PALETTE[i % PALETTE.length] + '22',
-            borderWidth: 2,
-            pointRadius: allYears.length > 30 ? 0 : 3,
-            tension: 0.3,
-            fill: false,
-        }));
-
-        const ctx = document.getElementById('trendsChart').getContext('2d');
-        if (trendsChartInstance) trendsChartInstance.destroy();
-        trendsChartInstance = new Chart(ctx, {
-            type: 'line',
-            data: { labels: allYears, datasets },
-            options: {
-                responsive: true,
-                interaction: { mode: 'index', intersect: false },
-                plugins: {
-                    legend: { position: 'top' },
-                    tooltip: { callbacks: {
-                        title: items => `Year ${items[0].label}`
-                    }}
-                },
-                scales: {
-                    x: { title: { display: true, text: 'Year' } },
-                    y: { title: { display: true, text: 'Publications' }, beginAtZero: true }
-                }
-            }
-        });
-    } catch(e) {
-        document.querySelector('.chart-wrapper').innerHTML =
-            `<div class="error">Failed to load trends: ${e.message}</div>`;
-    }
-}
-
-// Quality metrics table
-async function loadQuality() {
-    const container = document.getElementById('qualityTable');
-    try {
-        const r = await fetch(`${API}/api/quality`);
-        const d = await r.json();
-        if (!d.metrics || !d.metrics.length) {
-            container.innerHTML = '<div class="empty">No quality data available.</div>';
-            return;
-        }
-
-        function bar(pct) {
-            const cls = pct >= 90 ? 'q-green' : pct >= 50 ? 'q-orange' : 'q-red';
-            return `<div class="q-bar-wrap">
-                <div class="q-bar"><div class="q-fill ${cls}" style="width:${pct}%"></div></div>
-                <span>${pct.toFixed(1)}%</span>
-            </div>`;
-        }
-
-        let html = `<table class="quality-table">
-            <thead><tr>
-                <th>Series</th>
-                <th>Records</th>
-                <th>DOI</th>
-                <th>Event Year</th>
-                <th>Event Date</th>
-                <th>Has Authors</th>
-            </tr></thead><tbody>`;
-
-        d.metrics.forEach(m => {
-            html += `<tr>
-                <td>${m.series}</td>
-                <td style="text-align:center;font-weight:600">${m.total_records.toLocaleString()}</td>
-                <td>${bar(m.doi_coverage_pct)}</td>
-                <td>${bar(m.event_year_coverage_pct || 0)}</td>
-                <td>${bar(m.event_date_coverage_pct)}</td>
-                <td>${bar(m.author_coverage_pct)}</td>
-            </tr>`;
-        });
-
-        html += '</tbody></table>';
-        container.innerHTML = html;
-    } catch(e) {
-        container.innerHTML = `<div class="error">Failed to load quality metrics: ${e.message}</div>`;
-    }
-}
-
-// Top authors table
-async function loadAuthors() {
-    const series = document.getElementById('authorSeries').value;
-    const limit  = document.getElementById('authorLimit').value;
-    const params = new URLSearchParams({ limit });
-    if (series) params.append('series', series);
-
-    const container = document.getElementById('authorsTable');
-    container.innerHTML = '<div class="loading">Loading...</div>';
-
-    try {
-        const r = await fetch(`${API}/api/gold/authors?${params}`);
-        const d = await r.json();
-
-        if (!d.authors || !d.authors.length) {
-            container.innerHTML = '<div class="empty">No author data available.</div>';
-            return;
-        }
-
-        let html = `<table class="authors-table">
-            <thead><tr>
-                <th>#</th>
-                <th>Author</th>
-                <th>Series</th>
-                <th>Publications</th>
-            </tr></thead><tbody>`;
-
-        d.authors.forEach((a, i) => {
-            const rank = i + 1;
-            const rankClass = rank <= 3 ? `rank-${rank}` : '';
-            html += `<tr>
-                <td><span class="rank-badge ${rankClass}">${rank}</span></td>
-                <td>${a.author_name}</td>
-                <td><span class="badge badge-series" style="font-size:0.75em">${a.series}</span></td>
-                <td>${a.publication_count}</td>
-            </tr>`;
-        });
-
-        html += '</tbody></table>';
-        container.innerHTML = html;
-    } catch(e) {
-        container.innerHTML = `<div class="error">Failed to load authors: ${e.message}</div>`;
-    }
-}
-
-// ── Utilities ──────────────────────────────────────────────────
-function showLoading(id) {
-    document.getElementById(id).innerHTML = '<div class="loading">Loading...</div>';
-}
-function showError(id, msg) {
-    document.getElementById(id).innerHTML = `<div class="error">${msg}</div>`;
-}
-
-// ── Init ───────────────────────────────────────────────────────
-loadSummary();
-document.getElementById('query').addEventListener('keypress', e => {
-    if (e.key === 'Enter') searchPublications();
-});
+// ---- Start ----
+fillWorkTypes('evWorkType');
+fillWorkTypes('pWorkType');
+loadPublishers().then(loadEvents);
 </script>
 </body>
 </html>

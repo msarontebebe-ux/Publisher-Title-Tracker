@@ -97,5 +97,78 @@
       "silver_dir": "data/silver",
       "gold_dir": "data/gold"
     }
-  }
+  },
+  "publishers": [
+    {
+      "name": "Elsevier",
+      "abbreviation": "ELSEVIER",
+      "crossref_prefixes": [
+        "10.1016"
+      ],
+      "types": [
+        "proceedings",
+        "journal-issue",
+        "book",
+        "edited-book",
+        "monograph"
+      ],
+      "interval_hours": 24,
+      "initial_days": 7,
+      "note": "Elsevier rarely registers journal-issue DOIs in CrossRef; most new titles appear as edited-book/book."
+    },
+    {
+      "name": "Wiley",
+      "abbreviation": "WILEY",
+      "crossref_prefixes": [
+        "10.1002"
+      ],
+      "types": [
+        "proceedings",
+        "journal-issue",
+        "book",
+        "edited-book",
+        "monograph"
+      ],
+      "interval_hours": 24,
+      "initial_days": 7
+    },
+    {
+      "name": "IEEE",
+      "abbreviation": "IEEE",
+      "crossref_prefixes": [
+        "10.1109"
+      ],
+      "types": [
+        "proceedings",
+        "journal",
+        "journal-issue",
+        "book",
+        "edited-book",
+        "monograph"
+      ],
+      "interval_hours": 24,
+      "initial_days": 7,
+      "source": "ieee_api",
+      "ieee_daily_limit": 200,
+      "ieee_reserve": 20,
+      "note": "Conferences and journals come from the IEEE Xplore Metadata API (grouped into proceedings volumes / journal issues); books come from CrossRef. Falls back to CrossRef when IEEE_API_KEY is not set."
+    },
+    {
+      "name": "ACM",
+      "abbreviation": "ACM",
+      "crossref_prefixes": [
+        "10.1145"
+      ],
+      "types": [
+        "proceedings",
+        "journal",
+        "journal-issue",
+        "book",
+        "edited-book",
+        "monograph"
+      ],
+      "interval_hours": 24,
+      "initial_days": 7
+    }
+  ]
 }

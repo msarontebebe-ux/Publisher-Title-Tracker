@@ -67,3 +67,35 @@ def resolve_series_name(abbr_or_name: str, series_map: Dict[str, str] = None) ->
     if series_map is None:
         series_map = load_series_map()
     return series_map.get(abbr_or_name.strip().upper(), abbr_or_name)
+
+
+def load_publisher_streams(config_path: str = DEFAULT_CONFIG_PATH) -> list:
+    """
+    Return the tracked publishers as a list of
+    {'key': 'WILEY', 'name': 'Wiley', 'series': [<stream names stored in publications.series>]}.
+
+    Springer is made of its configured series (LNCS, CCIS ...); every other
+    publisher is a single stream stored under its own name. This is what lets
+    the API filter by publisher even though raw publisher strings vary
+    ('Springer Nature Switzerland', 'Springer-Verlag', ...).
+    """
+    cfg = load_config(config_path)
+    streams = []
+    springer = [s['name'] for s in cfg.get('springer_series', [])]
+    if springer:
+        streams.append({'key': 'SPRINGER', 'name': 'Springer', 'series': springer})
+    for p in cfg.get('publishers', []):
+        streams.append({'key': p['abbreviation'].upper(), 'name': p['name'],
+                        'series': [p['name']]})
+    return streams
+
+
+def resolve_publisher(value: str, streams: list) -> Optional[Dict[str, Any]]:
+    """Find a publisher entry by key or name (case-insensitive), or None."""
+    if not value:
+        return None
+    v = value.strip().upper()
+    for s in streams:
+        if v in (s['key'], s['name'].upper()):
+            return s
+    return None

@@ -1,13 +1,32 @@
-# GitLab CI for the Springer title-increment pipeline.
+# GitLab CI for the publisher title-increment pipeline.
 #   test     — runs on every push; pytest against a disposable Postgres service
-#   pipeline — runs ONLY on schedules (Build → Pipeline schedules); needs the
-#              DATABASE_URL masked variable to be set in project settings,
-#              otherwise the orchestrator safely falls back to file-only mode.
+#   init     — schedules only; idempotent schema migration, once per pipeline
+#   pipeline — schedules only; one job per stream (Springer + each publisher), so
+#              a failure in one stream never hides the others. Jobs share a
+#              resource_group, so only one writes to the database at a time.
 #
-# Both jobs use stock Docker Hub images — no custom registry needed.
+# Needs the DATABASE_URL masked variable in project settings (Settings → CI/CD),
+# otherwise the orchestrator safely falls back to file-only mode.
+#
+# Optional schedule variable SCHEDULE_TARGET lets one project run several
+# schedules at different intervals:
+#   (unset)     → Springer and all publishers
+#   springer    → Springer series only
+#   publishers  → publishers only
+#
+# Volume: the busiest stream (Wiley) registers ~45 titles/day, so a 5000-result cap
+# leaves room for a schedule that was paused for months. If a run ever does hit
+# the cap it is logged 'partial' and the watermark is NOT advanced (nothing is
+# lost) - raise --max-results if you see that.
+#
+# Adding a publisher: add it to config.json AND to the matrix below
+# (tests/test_ci_config.py fails if the two drift apart).
+#
+# All jobs use stock Docker Hub images — no custom registry needed.
 
 stages:
   - test
+  - init
   - pipeline
 
 default:
@@ -33,21 +52,14 @@ test:
     - pytest -v
 
 # ---------------------------------------------------------------------------
-# Stage: pipeline — the scheduled "interval extraction" the assignment requires
+# Stages: init + pipeline — the scheduled "interval extraction" the assignment requires
 # ---------------------------------------------------------------------------
-scheduled-pipeline:
-  stage: pipeline
+.scheduled:
   image: python:3.12-slim
   variables:
-    # DATABASE_URL comes from the masked CI/CD variable (Settings → CI/CD).
-    # When it is absent, init + orchestrator fall back to file-only mode
-    # rather than failing — but with it set, runs write to the Neon DB.
     PIP_CACHE_DIR: "$CI_PROJECT_DIR/.pip-cache"
   before_script:
     - pip install --no-cache-dir -r requirements.txt
-  script:
-    - python init_database.py          # idempotent schema safety
-    - python orchestrator.py --incremental --max-results 500
   cache:
     key: pip
     paths:
@@ -57,5 +69,32 @@ scheduled-pipeline:
     paths:
       - logs/
     expire_in: 30 days
+
+init-database:
+  extends: .scheduled
+  stage: init
+  script:
+    - python init_database.py          # idempotent schema safety (adds work_type etc.)
   rules:
     - if: $CI_PIPELINE_SOURCE == "schedule"
+
+springer:
+  extends: .scheduled
+  stage: pipeline
+  resource_group: neon-database
+  script:
+    - python orchestrator.py --incremental --no-publishers --max-results 5000
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule" && ($SCHEDULE_TARGET == null || $SCHEDULE_TARGET == "" || $SCHEDULE_TARGET == "springer")
+
+publisher:
+  extends: .scheduled
+  stage: pipeline
+  resource_group: neon-database
+  parallel:
+    matrix:
+      - PUBLISHER: [ELSEVIER, WILEY, IEEE, ACM]
+  script:
+    - python orchestrator.py --incremental --publisher "$PUBLISHER" --max-results 5000
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule" && ($SCHEDULE_TARGET == null || $SCHEDULE_TARGET == "" || $SCHEDULE_TARGET == "publishers")

@@ -29,16 +29,21 @@ class CrossRefScraper:
         
         # Store raw API responses for data lake bronze layer
         self.raw_responses = []
+        # False when the last search was cut short (network/parse error or
+        # more results existed than max_results). The runner uses it to avoid
+        # advancing the watermark over data that was never fetched.
+        self.fetch_ok = True
     
-    def search_by_issn(self, issn: str, year_start: Optional[int] = None, 
-                       year_end: Optional[int] = None, max_results: int = 1000,
-                       from_created_date: Optional[str] = None) -> Tuple[List[Publication], List[Dict[Any, Any]]]:
+    def search_by_filter(self, base_filter: str, year_start: Optional[int] = None,
+                         year_end: Optional[int] = None, max_results: int = 1000,
+                         from_created_date: Optional[str] = None) -> Tuple[List[Publication], List[Dict[Any, Any]]]:
         """
-        Search publications by ISSN (series identifier).
+        Search CrossRef works with an arbitrary base filter (e.g. "issn:X,type:book"
+        or "prefix:10.1016,type:edited-book"). Repeated filter names are OR-ed by CrossRef.
         Uses cursor-based pagination to bypass CrossRef's 10K offset limit.
         
         Args:
-            issn: ISSN of the series
+            base_filter: CrossRef `filter` expression without date constraints
             year_start: Optional start year filter
             year_end: Optional end year filter
             max_results: Maximum number of results to fetch
@@ -53,17 +58,18 @@ class CrossRefScraper:
         """
         publications = []
         self.raw_responses = []  # Reset raw responses
+        self.fetch_ok = True
         cursor = '*'  # Start cursor for deep pagination
         rows = 100  # Items per request (max 1000, but 100 is safer)
         
-        print(f"Searching CrossRef for ISSN: {issn}")
+        print(f"Searching CrossRef: {base_filter}")
         
         while len(publications) < max_results:
             params = {
-                'filter': f'issn:{issn},type:book',  # Filter for book-level records (proceedings volumes)
+                'filter': base_filter,
                 'rows': rows,
                 'cursor': cursor,  # Use cursor instead of offset for deep pagination
-                'select': 'DOI,title,subtitle,author,editor,published-print,published-online,container-title,volume,page,ISBN,ISSN,publisher,type,event'
+                'select': 'DOI,title,subtitle,author,editor,published-print,published-online,container-title,volume,issue,page,ISBN,ISSN,publisher,type,event'
             }
             
             # Date filtering. A watermark (from_created_date) selects the true
@@ -102,6 +108,9 @@ class CrossRefScraper:
                 print(f"  Fetched {len(publications)}/{min(total_results, max_results)} publications...")
                 
                 # Check if we've reached the end or max results
+                if len(publications) >= max_results and total_results > max_results:
+                    print(f"  Truncated: {total_results} available, limit {max_results}")
+                    self.fetch_ok = False
                 if not next_cursor or len(publications) >= max_results:
                     print(f"  Completed: {len(publications)} publications")
                     break
@@ -113,13 +122,23 @@ class CrossRefScraper:
                 
             except requests.RequestException as e:
                 print(f"  Error fetching data: {e}")
+                self.fetch_ok = False
                 break
             except Exception as e:
                 print(f"  Error parsing response: {e}")
+                self.fetch_ok = False
                 break
         
         return publications[:max_results], self.raw_responses[:max_results]
     
+    def search_by_issn(self, issn: str, year_start: Optional[int] = None,
+                       year_end: Optional[int] = None, max_results: int = 1000,
+                       from_created_date: Optional[str] = None) -> Tuple[List[Publication], List[Dict[Any, Any]]]:
+        """Search book-level records (proceedings volumes) of a series by ISSN."""
+        return self.search_by_filter(
+            f'issn:{issn},type:book', year_start, year_end, max_results,
+            from_created_date=from_created_date)
+
     def search_by_series_title(self, series_title: str, publisher: str = "Springer",
                                year_start: Optional[int] = None, 
                                year_end: Optional[int] = None,
@@ -259,8 +278,17 @@ class CrossRefScraper:
         """
         try:
             # Extract title
-            title_list = item.get('title', ['Unknown Title'])
-            title = title_list[0] if title_list else 'Unknown Title'
+            title_list = item.get('title') or []
+            title = title_list[0] if title_list else None
+            if not title:
+                # Journal issues have no title of their own: build one from
+                # the journal name + volume/issue so the record is readable.
+                container = (item.get('container-title') or [None])[0]
+                if container:
+                    vol, iss = item.get('volume'), item.get('issue')
+                    title = container + (f" Vol. {vol}" if vol else '') + (f" No. {iss}" if iss else '')
+                else:
+                    title = 'Unknown Title'
             
             # Extract authors/editors (books have editors, book-chapters have authors)
             authors_data = item.get('author', []) or item.get('editor', [])
@@ -331,6 +359,7 @@ class CrossRefScraper:
                 ee=ee,
                 isbn=isbn,
                 publisher=publisher,
+                work_type=item.get('type'),
                 event_date_start=event_info.get('event_date_start') if event_info else None,
                 event_date_end=event_info.get('event_date_end') if event_info else None,
                 event_year=event_info.get('event_year') if event_info else None,

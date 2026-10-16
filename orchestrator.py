@@ -10,6 +10,8 @@ Runs the complete ETL workflow:
 Usage:
     python orchestrator.py                    # Run all series
     python orchestrator.py --series LNCS      # Run specific series
+    python orchestrator.py --publisher WILEY  # Run a publisher stream (CrossRef prefix + types)
+    python orchestrator.py --no-publishers    # All Springer series, no publishers
     python orchestrator.py --dry-run          # Validate without executing
     python orchestrator.py --incremental      # Incremental mode (current year only)
 """
@@ -69,6 +71,18 @@ class PipelineConfig:
         """Get list of all series abbreviations."""
         return [s['abbreviation'] for s in self.config.get('springer_series', [])]
     
+    @property
+    def publisher_list(self) -> List[str]:
+        """Get list of all tracked publisher abbreviations (config.json `publishers`)."""
+        return [p['abbreviation'] for p in self.config.get('publishers', [])]
+
+    def get_publisher_info(self, abbreviation: str) -> Optional[Dict[str, Any]]:
+        """Get full publisher information (case-insensitive)."""
+        for p in self.config.get('publishers', []):
+            if p['abbreviation'].upper() == abbreviation.upper():
+                return p
+        return None
+
     @property
     def email(self) -> str:
         """Get email for API polite pool (lives under crossref_api in config.json)."""
@@ -182,6 +196,37 @@ class ScrapeStage(PipelineStage):
         self.logger.info(f"Fetched {self.metrics['records_fetched']} records")
 
 
+class PublisherScrapeStage(PipelineStage):
+    """Scrape one publisher (DOI prefix + work types) from CrossRef."""
+
+    def __init__(self):
+        super().__init__("scrape_publisher")
+
+    def _run(self, publisher: str, year_start: Optional[int] = None,
+             year_end: Optional[int] = None, max_results: int = 10000,
+             email: str = None, delay: float = 1.0, run_type: str = 'full'):
+        from pipeline.runner import scrape_publisher
+        from pipeline.scraper import CrossRefScraper
+        from pipeline.storage import DataLakeStorageHandler
+
+        config = load_config()
+        info = next((p for p in config.get('publishers', [])
+                     if p['abbreviation'].upper() == publisher.upper()), None)
+        if not info:
+            raise ValueError(f"Publisher {publisher} not found in config.json")
+
+        self.logger.info(f"Scraping publisher {publisher} ({info['name']})")
+        scraper = CrossRefScraper(email=email or 'research@example.com', delay=delay)
+        storage = DataLakeStorageHandler(
+            base_dir=config.get('output', {}).get('directory', 'data'))
+        results = scrape_publisher(
+            pub_config=info, scraper=scraper, storage=storage,
+            year_start=year_start, year_end=year_end,
+            max_results=max_results, run_type=run_type)
+        self.metrics['records_fetched'] = len(results) if results else 0
+        self.logger.info(f"Fetched {self.metrics['records_fetched']} records")
+
+
 class QualityCheckStage(PipelineStage):
     """Run data quality checks."""
     
@@ -258,7 +303,8 @@ class PipelineOrchestrator:
     
     def run_pipeline(self, series_list: List[str], year_start: int, 
                     year_end: Optional[int] = None, max_results: int = 10000,
-                    skip_scrape: bool = False, run_type: str = 'full') -> bool:
+                    skip_scrape: bool = False, run_type: str = 'full',
+                    publisher_list: Optional[List[str]] = None) -> bool:
         """
         Run the complete pipeline for specified series.
         
@@ -324,6 +370,32 @@ class PipelineOrchestrator:
                 self.logger.warning(f"Quality check failed for {series}")
             self.stages.append(quality_stage)
         
+        # Publisher streams (Elsevier, Wiley, IEEE, ACM ...) share the same
+        # Bronze/Silver/Events/Gold path; gold/quality are refreshed by the
+        # runner's shared write path, so only the scrape stage is needed here.
+        for publisher in (publisher_list or []):
+            self.logger.info(f"\n{'='*70}")
+            self.logger.info(f"Processing publisher: {publisher}")
+            self.logger.info(f"{'='*70}")
+            if skip_scrape:
+                continue
+            pub_stage = PublisherScrapeStage()
+            # Publishers are windowed by the watermark (incremental) or by an
+            # explicit year range only when the user passed one.
+            ok = pub_stage.execute(
+                publisher=publisher,
+                year_start=None if run_type == 'incremental' else year_start,
+                year_end=None if run_type == 'incremental' else year_end,
+                max_results=max_results,
+                email=self.config.email,
+                delay=self.config.delay,
+                run_type=run_type)
+            self.stages.append(pub_stage)
+            if not ok:
+                overall_success = False
+                self.logger.error(f"Scraping failed for publisher {publisher}")
+            time.sleep(2)
+
         # Pipeline summary
         pipeline_end = datetime.now(timezone.utc)
         duration = (pipeline_end - pipeline_start).total_seconds()
@@ -391,6 +463,9 @@ Examples:
     
     parser.add_argument('--series', nargs='+', 
                        help='Series to process (e.g., LNCS LNAI). Default: all series')
+    parser.add_argument('--publisher', nargs='+',
+                       help='Publisher streams to process (e.g., WILEY ELSEVIER IEEE ACM). '
+                            'Default: all series AND all publishers')
     parser.add_argument('--year-start', type=int, 
                        help='Start year for scraping (default: current year)')
     parser.add_argument('--year-end', type=int,
@@ -399,6 +474,9 @@ Examples:
                        help='Maximum results per series (default: 10000)')
     parser.add_argument('--incremental', action='store_true',
                        help='Incremental mode: only scrape current year')
+    parser.add_argument('--no-publishers', action='store_true',
+                       help='Without --series/--publisher, run only the Springer series '
+                            '(used by the CI job that handles Springer on its own)')
     parser.add_argument('--skip-scrape', action='store_true',
                        help='Skip scraping, only run gold layer and quality checks')
     parser.add_argument('--dry-run', action='store_true',
@@ -418,6 +496,18 @@ Examples:
         logger.error(f"Invalid JSON in configuration file: {e}")
         sys.exit(1)
     
+    # Determine publishers to process
+    publisher_list = []
+    if args.publisher:
+        publisher_list = [p.upper() for p in args.publisher]
+        invalid = [p for p in publisher_list if p not in config.publisher_list]
+        if invalid:
+            logger.error(f"Invalid publisher: {', '.join(invalid)}")
+            logger.info(f"Available publishers: {', '.join(config.publisher_list)}")
+            sys.exit(1)
+    elif not args.series and not args.no_publishers:
+        publisher_list = config.publisher_list   # default run covers everything
+
     # Determine series to process
     if args.series:
         series_list = [s.upper() for s in args.series]
@@ -427,6 +517,8 @@ Examples:
             logger.error(f"Invalid series: {', '.join(invalid)}")
             logger.info(f"Available series: {', '.join(config.series_list)}")
             sys.exit(1)
+    elif args.publisher:
+        series_list = []   # only the requested publishers
     else:
         series_list = config.series_list
     
@@ -443,6 +535,7 @@ Examples:
     if args.dry_run:
         logger.info("DRY RUN MODE - No data will be modified")
         logger.info(f"Would process series: {', '.join(series_list)}")
+        logger.info(f"Would process publishers: {', '.join(publisher_list)}")
         logger.info(f"Year range: {year_start}-{year_end}")
         logger.info(f"Max results per series: {args.max_results}")
         logger.info(f"Skip scraping: {args.skip_scrape}")
@@ -457,7 +550,8 @@ Examples:
         year_end=year_end,
         max_results=args.max_results,
         skip_scrape=args.skip_scrape,
-        run_type='incremental' if args.incremental else 'full'
+        run_type='incremental' if args.incremental else 'full',
+        publisher_list=publisher_list
     )
     
     # Exit with appropriate code

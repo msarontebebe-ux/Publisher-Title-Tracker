@@ -39,16 +39,18 @@ def init_database():
         conn.execute(text("""
             ALTER TABLE publications
                 ADD COLUMN IF NOT EXISTS event_name     VARCHAR(255),
-                ADD COLUMN IF NOT EXISTS event_location VARCHAR(255)
+                ADD COLUMN IF NOT EXISTS event_location VARCHAR(255),
+                ADD COLUMN IF NOT EXISTS work_type      VARCHAR(30)
         """))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_publications_work_type ON publications (work_type)"))
         conn.commit()
-    print("   Schema up to date (event_name, event_location columns ensured)")
+    print("   Schema up to date (event_name, event_location, work_type columns ensured)")
 
     tables = {
         'bronze': ['raw_responses'],
         'public (silver)': ['publications', 'authors', 'publication_authors',
                             'series', 'pipeline_runs', 'quality_metrics', 'events',
-                            'pipeline_state'],
+                            'pipeline_state', 'api_usage'],
         'gold': ['series_stats', 'yearly_trends', 'top_authors'],
     }
     for schema, tbl_list in tables.items():

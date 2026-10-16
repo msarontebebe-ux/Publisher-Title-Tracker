@@ -120,3 +120,32 @@ class TestCrossrefFallback:
         assert result['event_date_start'] is None
         assert result['event_year'] == 2023
         assert result['confidence'] == 'low'
+
+
+class TestCrossRefEventDateShapes:
+    """IEEE/ACM send event dates as CrossRef date objects, Springer as strings.
+    The object form used to crash the parser and silently drop the record."""
+
+    def test_date_parts_object_is_parsed(self):
+        item = {'title': ['2026 Conf (X)'], 'event': {
+            'name': '2026 Conf (X)', 'location': 'Dehradun, India',
+            'start': {'date-parts': [[2026, 7, 24]]},
+            'end': {'date-parts': [[2026, 7, 25]]}}}
+        info = E.extract_from_crossref(item)
+        assert info['event_date_start'] == '2026-07-24'
+        assert info['event_date_end'] == '2026-07-25'
+        assert info['event_year'] == 2026 and info['event_month'] == 7
+        assert info['event_location'] == 'Dehradun, India'
+        assert info['confidence'] == 'high'
+
+    def test_string_form_still_works(self):
+        item = {'title': ['T'], 'event': {'start': '2024-10-21', 'end': '2024-10-22'}}
+        info = E.extract_from_crossref(item)
+        assert info['event_date_start'] == '2024-10-21'
+        assert info['event_year'] == 2024
+
+    def test_year_only_date_parts(self):
+        item = {'title': ['T'], 'event': {'start': {'date-parts': [[2026]]}}}
+        info = E.extract_from_crossref(item)
+        assert info['event_date_start'] == '2026'
+        assert info['event_month'] is None

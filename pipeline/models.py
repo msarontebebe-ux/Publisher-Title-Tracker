@@ -51,6 +51,7 @@ class ScrapedPublication:
     ee: Opt[str] = None
     isbn: Opt[str] = None
     publisher: str = "Springer"
+    work_type: Opt[str] = None   # CrossRef type: proceedings / journal-issue / book ...
     dblp_key: Opt[str] = None
     dblp_url: Opt[str] = None
     event_date_start: Opt[str] = None
@@ -144,6 +145,7 @@ class Publication(Base):
     pages     = Column(String(50))
     isbn      = Column(String(50))
     publisher = Column(String(100), default='Springer')
+    work_type = Column(String(30), index=True)   # CrossRef type: proceedings / journal-issue / book ...
     url       = Column(Text)
 
     event_date_start      = Column(Date)
@@ -170,6 +172,7 @@ class Publication(Base):
             'pages':                 self.pages,
             'isbn':                  self.isbn,
             'publisher':             self.publisher,
+            'work_type':             self.work_type,
             'url':                   self.url,
             'event_date_start':      self.event_date_start.isoformat() if self.event_date_start else None,
             'event_date_end':        self.event_date_end.isoformat()   if self.event_date_end   else None,
@@ -332,6 +335,21 @@ class PipelineState(Base):
             'last_success_at': self.last_success_at.isoformat() if self.last_success_at else None,
             'updated_at':      self.updated_at.isoformat()      if self.updated_at      else None,
         }
+
+
+# ---------------------------------------------------------------------------
+# API USAGE — daily call counter for rate-limited sources (e.g. IEEE Xplore)
+# ---------------------------------------------------------------------------
+#
+# CI jobs start from a clean checkout, so the number of calls already spent
+# today cannot live in memory. One row per (provider, UTC day).
+
+class ApiUsage(Base):
+    __tablename__ = 'api_usage'
+
+    provider = Column(String(50), primary_key=True)
+    day      = Column(Date, primary_key=True)
+    calls    = Column(Integer, nullable=False, default=0)
 
 
 # ---------------------------------------------------------------------------

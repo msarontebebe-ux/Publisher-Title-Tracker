@@ -281,6 +281,7 @@ def _write_silver(publications, series_name: str) -> "SilverResult":
                     pages=pub_data.get('pages'),
                     isbn=pub_data.get('isbn'),
                     publisher=pub_data.get('publisher', 'Springer'),
+                    work_type=pub_data.get('work_type'),
                     url=pub_data.get('ee') or pub_data.get('url'),
                     event_date_start=pub_data.get('event_date_start'),
                     event_date_end=pub_data.get('event_date_end'),
@@ -395,6 +396,84 @@ def _log_pipeline_run(series: str, records_fetched: int, records_new: int,
         print(f"   Pipeline log failed: {exc}")
 
 
+def _persist_and_log(publications, raw_data, name: str, abbr: str, started,
+                     run_type: str, storage, set_series: bool = True,
+                     fetch_ok: bool = True):
+    """
+    Shared write path for every tracked stream (Springer series or publisher):
+    Bronze -> Silver -> Events -> Gold -> run log -> watermark.
+
+    `name` is the stream name used as pipeline_runs.series, the watermark key
+    and (when set_series) the publications.series value. fetch_ok=False means
+    the fetch was incomplete: the run is logged 'partial' and the watermark
+    stays put so the same window is retried.
+    """
+    if publications and set_series:
+        for pub in publications:
+            pub.series = name
+
+    if publications:
+        records_new = 0
+
+        if _db_configured():
+            # --- Cloud pipeline: Bronze → Silver → Events → Gold → Log ---
+            print(f"\n  Writing to Neon (3 layers):")
+            _write_bronze(raw_data, abbr, name)
+            silver = _write_silver(publications, name)
+            records_new = silver.inserted
+            # Append change events (title.added / title.updated). This is an
+            # additive projection — it never affects the silver write above.
+            events = _write_events(publications, name)
+            _refresh_gold(name)
+
+            # Truthful status: a batch that failed to commit means the run was
+            # only partially successful — record 'partial' (with the errors),
+            # never a clean 'success'. This is the audit trail NFR3 relies on.
+            if silver.failed:
+                status = 'partial'
+                error_msg = f"{silver.failed} batch(es) failed: " + "; ".join(silver.errors)
+            elif not fetch_ok:
+                status = 'partial'
+                error_msg = 'incomplete fetch (error or max_results reached) - watermark not advanced'
+            else:
+                status = 'success'
+                error_msg = None
+
+            _log_pipeline_run(name, len(publications), records_new, status,
+                              error=error_msg,
+                              started_at=started, run_type=run_type)
+            # Advance the watermark ONLY on a fully successful incremental run,
+            # so the next run fetches the delta after this one. A partial/failed
+            # run leaves the bookmark put and re-tries the same window.
+            if status == 'success' and run_type == 'incremental':
+                from pipeline.watermark import advance_watermark
+                new_wm = advance_watermark(name, when=_utcnow())
+                if new_wm:
+                    print(f"  Watermark advanced to {new_wm.isoformat()}")
+            print(f"Done: {abbr}: {len(publications)} fetched, {records_new} new, "
+                  f"{silver.skipped} skipped, status={status}")
+        else:
+            # --- Local fallback: write files only ---
+            print(f"\n  No DB configured — saving to local files only")
+            storage.save_by_series(publications, raw_data, abbr)
+            print(f"Done: {abbr}: {len(publications)} fetched, saved to local files")
+    else:
+        print(f"  No publications found for {abbr}")
+        # An empty result is still a completed run — log it (0 fetched, 0 new)
+        # so 'ran and found nothing' is distinguishable from 'never ran'.
+        if _db_configured():
+            _log_pipeline_run(name, 0, 0, 'success' if fetch_ok else 'partial',
+                              error=None if fetch_ok else 'incomplete fetch - watermark not advanced',
+                              started_at=started, run_type=run_type)
+            # Nothing new, but we still successfully checked up to now — advance
+            # the bookmark so the next incremental run starts from here.
+            if run_type == 'incremental' and fetch_ok:
+                from pipeline.watermark import advance_watermark
+                new_wm = advance_watermark(name, when=_utcnow())
+                if new_wm:
+                    print(f"  Watermark advanced to {new_wm.isoformat()}")
+
+
 def scrape_single_series(series_config: dict, scraper: CrossRefScraper,
                         storage: DataLakeStorageHandler, year_start=None, year_end=None,
                         max_results=50000, run_type: str = 'full'):
@@ -481,67 +560,62 @@ def scrape_single_series(series_config: dict, scraper: CrossRefScraper,
                               started_at=started, run_type=run_type)
         raise
 
-    if publications:
-        # Set series name for all publications
-        for pub in publications:
-            pub.series = name
+    _persist_and_log(publications, raw_data, name, abbr, started, run_type, storage,
+                     fetch_ok=getattr(scraper, 'fetch_ok', True) is not False)
 
-        records_new = 0
+    return publications
 
+
+def scrape_publisher(pub_config: dict, scraper: CrossRefScraper,
+                     storage: DataLakeStorageHandler, year_start=None, year_end=None,
+                     max_results=50000, run_type: str = 'full'):
+    """
+    Track one publisher (DOI prefix + work types from config.json `publishers`)
+    through the same Bronze/Silver/Events/Gold path as the Springer series.
+
+    Incremental runs use the watermark; the very first one (no bookmark yet)
+    looks back `initial_days` (default 7) instead of a whole year, because
+    publishers such as Wiley/Elsevier register thousands of records.
+    """
+    from datetime import timedelta
+    from pipeline.collectors import build_collector
+
+    name = pub_config['name']
+    abbr = pub_config['abbreviation']
+
+    print(f"\n{'='*80}")
+    print(f"Scraping publisher: {name} ({abbr})")
+    print(f"{'='*80}")
+
+    started = _utcnow()
+    from_created_date = None
+    if run_type == 'incremental':
+        wm = None
         if _db_configured():
-            # --- Cloud pipeline: Bronze → Silver → Events → Gold → Log ---
-            print(f"\n  Writing to Neon (3 layers):")
-            _write_bronze(raw_data, abbr, name)
-            silver = _write_silver(publications, name)
-            records_new = silver.inserted
-            # Append change events (title.added / title.updated). This is an
-            # additive projection — it never affects the silver write above.
-            events = _write_events(publications, name)
-            _refresh_gold(name)
-
-            # Truthful status: a batch that failed to commit means the run was
-            # only partially successful — record 'partial' (with the errors),
-            # never a clean 'success'. This is the audit trail NFR3 relies on.
-            if silver.failed:
-                status = 'partial'
-                error_msg = f"{silver.failed} batch(es) failed: " + "; ".join(silver.errors)
-            else:
-                status = 'success'
-                error_msg = None
-
-            _log_pipeline_run(name, len(publications), records_new, status,
-                              error=error_msg,
-                              started_at=started, run_type=run_type)
-            # Advance the watermark ONLY on a fully successful incremental run,
-            # so the next run fetches the delta after this one. A partial/failed
-            # run leaves the bookmark put and re-tries the same window.
-            if status == 'success' and run_type == 'incremental':
-                from pipeline.watermark import advance_watermark
-                new_wm = advance_watermark(name, when=_utcnow())
-                if new_wm:
-                    print(f"  Watermark advanced to {new_wm.isoformat()}")
-            print(f"Done: {abbr}: {len(publications)} fetched, {records_new} new, "
-                  f"{silver.skipped} skipped, status={status}")
+            from pipeline.watermark import get_watermark
+            wm = get_watermark(name)
+        if wm is not None:
+            from pipeline.watermark import watermark_to_created_date
+            from_created_date = watermark_to_created_date(wm)
+            print(f"  Watermark: {wm.isoformat()} -> fetching changes since {from_created_date}")
         else:
-            # --- Local fallback: write files only ---
-            print(f"\n  No DB configured — saving to local files only")
-            storage.save_by_series(publications, raw_data, abbr)
-            print(f"Done: {abbr}: {len(publications)} fetched, saved to local files")
-    else:
-        print(f"  No publications found for {abbr}")
-        # An empty result is still a completed run — log it (0 fetched, 0 new)
-        # so 'ran and found nothing' is distinguishable from 'never ran'.
+            days = int(pub_config.get('initial_days', 7))
+            from_created_date = (_utcnow() - timedelta(days=days)).strftime('%Y-%m-%d')
+            print(f"  Watermark: none yet - looking back {days} day(s) to {from_created_date}")
+
+    collector = build_collector(pub_config, scraper)
+    try:
+        publications, raw_data = collector.fetch(
+            from_created_date=from_created_date, year_start=year_start,
+            year_end=year_end, max_results=max_results)
+    except Exception as exc:
         if _db_configured():
-            _log_pipeline_run(name, 0, 0, 'success',
+            _log_pipeline_run(name, 0, 0, 'failed', error=str(exc),
                               started_at=started, run_type=run_type)
-            # Nothing new, but we still successfully checked up to now — advance
-            # the bookmark so the next incremental run starts from here.
-            if run_type == 'incremental':
-                from pipeline.watermark import advance_watermark
-                new_wm = advance_watermark(name, when=_utcnow())
-                if new_wm:
-                    print(f"  Watermark advanced to {new_wm.isoformat()}")
-    
+        raise
+
+    _persist_and_log(publications, raw_data, name, abbr, started, run_type, storage,
+                     fetch_ok=collector.fetch_ok)
     return publications
 
 

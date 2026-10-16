@@ -226,6 +226,25 @@ class ConferenceDateExtractor:
 
         return None
 
+    @staticmethod
+    def _event_date_to_iso(value: Any) -> Optional[str]:
+        """
+        Normalise a CrossRef event start/end value to 'YYYY[-MM[-DD]]'.
+
+        Springer gives a plain string ('2024-10-21'); IEEE/ACM give the
+        CrossRef date object {'date-parts': [[2026, 7, 24]]}. Both must work.
+        """
+        if not value:
+            return None
+        if isinstance(value, str):
+            return value
+        if isinstance(value, dict):
+            parts = (value.get('date-parts') or [[]])[0]
+            if parts and parts[0]:
+                return '-'.join(
+                    [str(parts[0])] + [f"{int(p):02d}" for p in parts[1:3] if p])
+        return None
+
     @classmethod
     def extract_from_crossref(cls, item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
@@ -238,8 +257,8 @@ class ConferenceDateExtractor:
 
         event = item.get('event')
         if event:
-            start = event.get('start')
-            end   = event.get('end')
+            start = cls._event_date_to_iso(event.get('start'))
+            end   = cls._event_date_to_iso(event.get('end'))
             if start:
                 parts = start.split('-')
                 return {
