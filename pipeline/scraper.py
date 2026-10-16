@@ -157,6 +157,7 @@ class CrossRefScraper:
             List of Publication objects
         """
         publications = []
+        self.fetch_ok = True
         offset = 0
         rows = 100
         
@@ -215,9 +216,11 @@ class CrossRefScraper:
                 
             except requests.RequestException as e:
                 print(f"  Error fetching data: {e}")
+                self.fetch_ok = False
                 break
             except Exception as e:
                 print(f"  Error parsing response: {e}")
+                self.fetch_ok = False
                 break
         
         return publications[:max_results]

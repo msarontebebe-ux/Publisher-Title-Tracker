@@ -544,14 +544,20 @@ def scrape_single_series(series_config: dict, scraper: CrossRefScraper,
                     e_issn, year_start, year_end, max_results,
                     from_created_date=from_created_date)
         
-        # Fallback to title-based search
-        if not publications:
-            print(f"Falling back to series title search")
+        # Fallback to title-based search - ONLY for a series that has no ISSN to
+        # query. An empty ISSN search is a valid answer (nothing new since the
+        # watermark), not a failure: the title search is a fuzzy match over a huge
+        # result set, ignores the watermark and used to page through it for
+        # thousands of requests before returning nothing.
+        if not publications and not issn:
+            print(f"No ISSN configured - falling back to series title search")
             # Title search doesn't return raw data yet (can be added if needed)
             publications = scraper.search_by_series_title(
                 name, "Springer", year_start, year_end, max_results
             )
             raw_data = []  # No raw data from title search
+        elif not publications:
+            print(f"  No new records for {abbr} (empty result is a valid answer)")
     except Exception as exc:
         # Record the failed run before propagating, so pipeline_runs
         # tells the truth even when a scrape dies mid-flight.
