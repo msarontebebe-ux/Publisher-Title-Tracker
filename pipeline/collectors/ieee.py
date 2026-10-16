@@ -33,6 +33,7 @@ from pipeline.models import ScrapedPublication
 BASE_URL = 'https://ieeexploreapi.ieee.org/api/v1/search/articles'
 PAGE_SIZE = 200            # API maximum per call
 BOOK_TYPES = ('book', 'edited-book', 'monograph')
+SOURCE = 'ieee-xplore'      # label stored on events built from this API (same name as the quota provider)
 
 _MONTHS = {m: i for i, m in enumerate(
     ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'], 1)}
@@ -175,7 +176,7 @@ class IeeeXploreCollector(Collector):
                 title=name, authors=[], year=year, venue=name, volume=None, pages=None,
                 doi=doi, ee=f'https://ieeexplore.ieee.org/xpl/conhome/{pn}/proceeding',
                 isbn=(first.get('isbn') or '').replace('-', '') or None,
-                publisher='IEEE', work_type='proceedings',
+                publisher='IEEE', work_type='proceedings', source=SOURCE,
                 event_date_start=start, event_date_end=dates[1] if dates else None,
                 event_year=int(start[:4]) if start else year,
                 event_month=int(start[5:7]) if start else None,
@@ -197,7 +198,7 @@ class IeeeXploreCollector(Collector):
                 title=title, authors=[], year=_int(p.get('publication_year')), venue=name,
                 volume=str(vol) if vol else None, pages=None, doi=f'ieee:issue:{pn}:{isn}',
                 ee=f'https://ieeexplore.ieee.org/xpl/tocresult.jsp?isnumber={isn}',
-                isbn=None, publisher='IEEE', work_type='journal-issue'))
+                isbn=None, publisher='IEEE', work_type='journal-issue', source=SOURCE))
         return out
 
     # -- Collector API ---------------------------------------------------

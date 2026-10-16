@@ -121,11 +121,15 @@ def _write_events(publications, series_name: str) -> "EventResult":
         dois = [d.get('doi') for d in pub_dicts if d.get('doi')]
         last_hash: dict = {}
         if dois:
-            # Postgres: DISTINCT ON gives the most recent event per DOI.
+            # Postgres: DISTINCT ON gives the most recent event per DOI. The DOI
+            # is the identity ACROSS sources (CrossRef and the IEEE API describe
+            # the same proceedings under one DOI), so the lookup deliberately
+            # ignores which source wrote the last event; filtering by source
+            # would report an already-known title as new.
             rows = session.execute(sa_text("""
                 SELECT DISTINCT ON (source_record_id) source_record_id, payload_hash
                 FROM events
-                WHERE source = 'crossref' AND source_record_id = ANY(:dois)
+                WHERE source_record_id = ANY(:dois)
                 ORDER BY source_record_id, id DESC
             """), {'dois': dois}).fetchall()
             last_hash = {row[0]: row[1] for row in rows}
@@ -181,7 +185,7 @@ def _write_events(publications, series_name: str) -> "EventResult":
             """), {
                 'event_id':     new_event_id(),
                 'event_type':   event_type,
-                'source':       'crossref',
+                'source':       pub_data.get('source') or 'crossref',
                 'doi':          doi,
                 'series':       pub_data.get('series') or series_name,
                 'publisher':    pub_data.get('publisher'),

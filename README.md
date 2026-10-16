@@ -1,158 +1,103 @@
-# Springer Conference Proceedings Monitor
+# Publisher Title Tracker
 
-An autonomous data pipeline that **monitors new and updated conference
-proceedings** from Springer series (LNCS, CCIS, LNAI, …) via the free
-CrossRef API, stores them in a cloud PostgreSQL database using a
-medallion (Bronze → Silver → Gold) architecture, detects changes as an
-append-only **event log**, and serves the increments to users
-through a REST API, a web interface, and RSS/Atom feeds.
+Keeps track of new titles (proceedings volumes, journal issues, books) from
+Springer, Elsevier, Wiley, IEEE and ACM. Every day it fetches what was registered
+since the last run, stores it in PostgreSQL and records each new or changed title
+as an event. Results are available in a web page, a JSON API and RSS/Atom feeds.
 
-It runs on a schedule (GitLab CI) — every night it fetches only what
-changed since the last successful run and records what is new or updated.
+Built as part of a thesis. Individual journal articles are not tracked.
 
----
+## How it works
 
-## What it does
+1. A collector asks CrossRef (or the IEEE Xplore API for IEEE) for records created
+   since the last successful run of that stream.
+2. Records are stored raw (bronze), cleaned and de-duplicated by DOI (silver), and
+   a few aggregates are recomputed (gold).
+3. Each record is fingerprinted. A new DOI gives a `title.added` event, a known
+   DOI with changed data gives `title.updated`, unchanged data gives nothing.
 
-1. **Extract** — query CrossRef for proceedings volumes in the configured
-   Springer series, using cursor pagination (no 10k limit).
-2. **Load (medallion)** — store raw responses (Bronze), cleaned records
-   (Silver), and analytics aggregates (Gold) in PostgreSQL.
-3. **Detect change** — append a `title.added` or `title.updated` event for
-   every observed change (fingerprint-based, idempotent).
-4. **Serve increments** — expose new/updated titles via the API, web UI, and
-   subscribable feeds, so users are notified instead of checking by hand.
+Each stream has a watermark (`pipeline_state.last_success_at`) that only moves
+forward after a complete run, so a failed run is just retried. The `events` table
+has a unique constraint on `(source, source_record_id, payload_hash)`, so running
+twice cannot create duplicates.
 
-## Architecture
+## What is tracked
 
-```
-CrossRef API
-    │  (incremental: only changes since the last watermark)
-    ▼
-Bronze   raw API responses (one row per batch)
-    ▼
-Silver   cleaned, deduplicated publications + authors
-    ▼
-Gold     per-series stats, yearly trends, top authors
-    ▼
-Events   append-only change log: title.added / title.updated
-    ▼
-REST API  ·  Web UI  ·  /feed.rss  ·  /feed/events.atom
-```
+- **Springer:** LNCS, CCIS, IFIP AICT, LNEE, LNNS, AISC, via CrossRef by ISSN.
+  LNAI and LNBI are skipped because CrossRef files them under LNCS.
+- **Elsevier, Wiley, ACM:** via CrossRef by DOI prefix and work type.
+- **IEEE:** conferences and journals from the IEEE Xplore API (papers are grouped
+  into volumes/issues), books from CrossRef. Falls back to CrossRef without a key.
 
-### Key concepts
+Publishers and types are set in `config.json`.
 
-- **Medallion layers** — Bronze (raw) → Silver (clean) → Gold (aggregates),
-  implemented as PostgreSQL schemas/tables in Neon.
-- **Watermark (high-water mark)** — each series keeps a `last_success_at`
-  bookmark. Incremental runs ask CrossRef only for records created/changed
-  after it (`from-created-date`), instead of re-scanning the whole year. The
-  bookmark advances only after a successful run.
-- **Event log** — every observed change is an append-only row with a stable
-  `payload_hash`. A `UNIQUE(source, doi, payload_hash)` constraint makes
-  re-runs idempotent by construction. This is what distinguishes a *new*
-  title (`title.added`) from a *changed* one (`title.updated`).
+## Setup
 
-## Quick start
+Python 3.12 and a PostgreSQL database (I use Neon).
 
 ```bash
-# 1. Install dependencies
-python -m pip install -r requirements.txt
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+```
 
-# 2. Point at a database (create a .env with your Neon/RDS connection string)
-#    DATABASE_URL=postgresql://user:pass@host/dbname?sslmode=require
-#    Without it, the pipeline falls back to local JSON files.
+Create a `.env`:
 
-# 3. Create the schemas and tables (idempotent, safe to re-run)
+```
+DATABASE_URL=postgresql://user:password@host/dbname?sslmode=require
+IEEE_API_KEY=your-key        # optional, free tier is ~200 calls/day
+```
+
+Then create the tables (safe to re-run):
+
+```bash
 python init_database.py
-
-# 4. Run the pipeline (incremental — only what changed since last run)
-python orchestrator.py --incremental
-
-# 5. Serve the API + web UI
-python api_server.py          # then open http://localhost:5000
 ```
 
-### Common commands
+## Usage
 
 ```bash
-python orchestrator.py --incremental                  # nightly delta run
-python orchestrator.py --series LNCS                  # one series, current year
-python orchestrator.py --series LNCS --year-start 2020   # backfill a range
-python orchestrator.py --dry-run                      # validate config only
-python main_crossref.py --series CCIS --year-start 2024   # scraper entry point
-pytest                                                 # run the test suite
+python orchestrator.py --incremental                       # everything, only what is new
+python orchestrator.py --incremental --publisher WILEY IEEE
+python orchestrator.py --incremental --no-publishers       # Springer series only
+python orchestrator.py --dry-run                           # check the config
+
+python api_server.py                                       # http://localhost:5000
 ```
 
-## Project structure
+The first incremental run of a publisher looks back 7 days; after that the
+watermark decides. Without `--incremental` it fetches the whole current year,
+which is a lot for Wiley, so try ACM first.
 
-```
-├── orchestrator.py            # pipeline entry point (scrape→load→events→gold→log)
-├── main_crossref.py           # scraper CLI (thin shim over pipeline.runner)
-├── api_server.py              # REST API + web interface
-├── init_database.py           # create schemas/tables, seed series (idempotent)
-├── enrich_event_dates.py      # utility: backfill event dates from CrossRef/Springer Meta
-├── migrate_to_database.py     # utility: backfill existing local JSON into the DB
-├── config.json                # series definitions (name, ISSN) + API settings
-├── .gitlab-ci.yml             # CI: tests on every push + scheduled nightly run
-├── pipeline/                  # the reusable pipeline package
-│   ├── config.py              # config loading + series lookup helpers
-│   ├── db.py                  # database connection (from environment)
-│   ├── models.py              # SQLAlchemy models (bronze/silver/gold/events/state)
-│   ├── scraper.py             # CrossRef API client (cursor pagination)
-│   ├── event_dates.py         # conference date/venue extraction from titles
-│   ├── events.py              # change detection: fingerprint + add/update classify
-│   ├── watermark.py           # high-water mark helpers
-│   ├── storage.py             # Bronze/Silver/Gold file layers (fallback)
-│   ├── gold.py                # Gold aggregates + data-quality metrics
-│   └── runner.py              # scrape orchestration + DB writes
-├── tests/                     # pytest suite
-└── data/                      # local fallback output (bronze/silver/gold JSON)
+The API lives under `/api` (`/api/publishers`, `/api/events`, `/api/publications`,
+...; the index at `/api` lists them), with feeds at `/feed.rss` and
+`/feed/events.atom`. Most endpoints accept `publisher=` (SPRINGER, ELSEVIER, WILEY,
+IEEE, ACM).
+
+## Scheduling and tests
+
+`.gitlab-ci.yml` runs the tests on every push. On a pipeline schedule it runs
+`init-database`, `springer` and one `publisher` job per publisher; this needs a
+masked `DATABASE_URL` variable. To add a publisher, add it to `config.json` and to
+the job matrix in the CI file (a test fails if they differ).
+
+```bash
+pip install -r requirements-dev.txt
+pytest
 ```
 
-## Series monitored
+Database tests use `TEST_DATABASE_URL` and are skipped if it is unreachable; they
+never touch the database from `.env`.
 
-LNCS, LNAI, LNBI, CCIS, IFIP AICT, LNEE, LNNS, AISC — each defined in
-`config.json` with its ISSN. Records are **proceedings volumes** (whole
-books) with metadata: DOI, ISBN, title, editors/authors, year, pages, and
-extracted conference date/venue when present.
+## Limitations
 
-## API endpoints
+- "New" means newly registered in CrossRef, which can be later than the
+  publisher's announcement. Metadata is uneven (Elsevier has almost no journal
+  issues there).
+- Events written before the `source` column was labelled are all `crossref`,
+  including some that came from the IEEE API.
+- Old Springer rows have no `work_type` until you run `python backfill_work_type.py`.
+- The API has no authentication or rate limiting, and reading `/api/events` sets
+  `delivered_at`, so it is not read-only.
 
-| Endpoint | Purpose |
-|---|---|
-| `GET /api/publications?series=&year=&query=` | Search publications |
-| `GET /api/publications/new?since=` | Increments added since a date |
-| `GET /api/publications/recent` | Most recent publications |
-| `GET /api/events?since=&type=` | Change events (`title.added` / `title.updated`) |
-| `GET /api/series`, `/api/stats` | Series list and overall stats |
-| `GET /api/gold/stats`, `/api/gold/trends`, `/api/gold/authors` | Gold aggregates |
-| `GET /feed.rss?series=` | RSS feed of new publications |
-| `GET /feed/events.atom?series=` | Atom feed of change events |
-| `GET /health` | Health / DB connectivity check |
-
-## Scheduling & CI
-
-`.gitlab-ci.yml` defines two jobs:
-- **test** — runs the pytest suite (with a disposable Postgres) on every push.
-- **scheduled-pipeline** — runs `orchestrator.py --incremental` on a GitLab
-  pipeline schedule (e.g. nightly), writing to the cloud DB and keeping each
-  run's `logs/` as an artifact.
-
-## Configuration
-
-`config.json` holds the series list (name + ISSN) and CrossRef settings
-(email for the polite pool, request delay). Database credentials come from
-environment variables (`DATABASE_URL`), never from files — see `pipeline/db.py`.
-
-## Notes
-
-- Uses the **CrossRef REST API** (free; the polite pool just needs an email).
-- Deduplication is by DOI; the event log is idempotent by a DB uniqueness
-  constraint, so re-runs never create duplicates.
-- Free-tier friendly: incremental runs fetch only the delta, not full re-scans.
-
-## License
-
-For academic / research use.
-
+Data sources: [CrossRef](https://api.crossref.org) and
+[IEEE Xplore](https://developer.ieee.org). For academic / research use.

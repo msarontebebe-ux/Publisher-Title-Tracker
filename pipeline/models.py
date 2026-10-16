@@ -52,6 +52,7 @@ class ScrapedPublication:
     isbn: Opt[str] = None
     publisher: str = "Springer"
     work_type: Opt[str] = None   # CrossRef type: proceedings / journal-issue / book ...
+    source: str = "crossref"     # where the record came from (crossref / ieee-xplore); stored on its events
     dblp_key: Opt[str] = None
     dblp_url: Opt[str] = None
     event_date_start: Opt[str] = None

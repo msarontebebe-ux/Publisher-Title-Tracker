@@ -163,6 +163,7 @@ class DataLakeStorageHandler:
             'url',             # Direct link to paper
             'isbn',            # ISBN of proceedings volume
             'publisher',       # Publisher name
+            'work_type',       # CrossRef type: proceedings, journal-issue, book ...
             'event_name',       # Conference acronym+year (e.g. ECCV 2024)
             'event_location',   # Conference location (e.g. Milan, Italy)
             'event_date_start', # Conference start date
@@ -202,6 +203,7 @@ class DataLakeStorageHandler:
                 row.pop('dblp_url', None)
                 row.pop('venue', None)
                 row.pop('ee', None)  # Using 'url' instead
+                row.pop('source', None)  # internal label for the event log, not a CSV column
                 
                 writer.writerow(row)
         
