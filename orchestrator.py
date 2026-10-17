@@ -175,7 +175,7 @@ class ScrapeStage(PipelineStage):
         # scrape_single_series expects a scraper client and a storage handler;
         # it performs the Bronze/Silver/Gold writes and run logging itself.
         scraper = CrossRefScraper(
-            email=email or self.config.email,
+            email=email or config.get('crossref_api', {}).get('email', 'research@example.com'),
             delay=delay
         )
         storage = DataLakeStorageHandler(
@@ -216,7 +216,9 @@ class PublisherScrapeStage(PipelineStage):
             raise ValueError(f"Publisher {publisher} not found in config.json")
 
         self.logger.info(f"Scraping publisher {publisher} ({info['name']})")
-        scraper = CrossRefScraper(email=email or 'research@example.com', delay=delay)
+        scraper = CrossRefScraper(
+            email=email or config.get('crossref_api', {}).get('email', 'research@example.com'),
+            delay=delay)
         storage = DataLakeStorageHandler(
             base_dir=config.get('output', {}).get('directory', 'data'))
         results = scrape_publisher(
@@ -356,7 +358,13 @@ class PipelineOrchestrator:
                 if len(series_list) > 1:
                     time.sleep(2)
             
-            # Stage 2: Gold Layer (includes silver upsert via main_crossref.py)
+            # A scrape already refreshes gold and the quality metrics for its series
+            # (pipeline.runner._persist_and_log), so these two stages only run on
+            # their own, with --skip-scrape.
+            if not skip_scrape:
+                continue
+
+            # Stage 2: Gold Layer
             gold_stage = GoldLayerStage()
             if not gold_stage.execute(series=series_full_name):
                 overall_success = False

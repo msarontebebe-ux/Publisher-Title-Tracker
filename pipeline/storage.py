@@ -199,8 +199,6 @@ class DataLakeStorageHandler:
                 
                 # Remove unnecessary fields
                 row.pop('fetched_at', None)
-                row.pop('dblp_key', None)
-                row.pop('dblp_url', None)
                 row.pop('venue', None)
                 row.pop('ee', None)  # Using 'url' instead
                 row.pop('source', None)  # internal label for the event log, not a CSV column

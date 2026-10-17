@@ -31,7 +31,6 @@ from datetime import datetime, timezone
 class ScrapedAuthor:
     """Lightweight author record produced by the scraper."""
     name: str
-    dblp_url: Opt[str] = None
 
     def to_dict(self):
         return _dc_asdict(self)
@@ -53,8 +52,6 @@ class ScrapedPublication:
     publisher: str = "Springer"
     work_type: Opt[str] = None   # CrossRef type: proceedings / journal-issue / book ...
     source: str = "crossref"     # where the record came from (crossref / ieee-xplore); stored on its events
-    dblp_key: Opt[str] = None
-    dblp_url: Opt[str] = None
     created: Opt[str] = None     # when CrossRef first registered the DOI (ISO date-time); not part of the fingerprint
     event_date_start: Opt[str] = None
     event_date_end: Opt[str] = None

@@ -3,7 +3,6 @@
     {
       "name": "Lecture Notes in Computer Science",
       "abbreviation": "LNCS",
-      "dblp_venue": "lncs",
       "springer_series_id": "558",
       "springer_url": "https://link.springer.com/bookseries/558",
       "issn": "0302-9743",
@@ -12,7 +11,6 @@
     {
       "name": "Lecture Notes in Artificial Intelligence",
       "abbreviation": "LNAI",
-      "dblp_venue": "lnai",
       "springer_series_id": "1244",
       "springer_url": "https://link.springer.com/bookseries/1244",
       "issn_shared_with": "LNCS",
@@ -23,7 +21,6 @@
     {
       "name": "Lecture Notes in Bioinformatics",
       "abbreviation": "LNBI",
-      "dblp_venue": "lnbi",
       "springer_series_id": "5381",
       "springer_url": "https://link.springer.com/bookseries/5381",
       "issn_shared_with": "LNCS",
@@ -34,7 +31,6 @@
     {
       "name": "Communications in Computer and Information Science",
       "abbreviation": "CCIS",
-      "dblp_venue": "ccis",
       "springer_series_id": "7899",
       "springer_url": "https://link.springer.com/bookseries/7899",
       "issn": "1865-0929",
@@ -43,7 +39,6 @@
     {
       "name": "IFIP Advances in Information and Communication Technology",
       "abbreviation": "IFIP AICT",
-      "dblp_venue": "ifipaict",
       "springer_series_id": "6102",
       "springer_url": "https://link.springer.com/bookseries/6102",
       "issn": "1868-4238",
@@ -52,7 +47,6 @@
     {
       "name": "Lecture Notes in Electrical Engineering",
       "abbreviation": "LNEE",
-      "dblp_venue": "lnee",
       "springer_series_id": "7818",
       "springer_url": "https://link.springer.com/bookseries/7818",
       "issn": "1876-1100",
@@ -61,7 +55,6 @@
     {
       "name": "Lecture Notes in Networks and Systems",
       "abbreviation": "LNNS",
-      "dblp_venue": "lnns",
       "springer_series_id": "15179",
       "springer_url": "https://link.springer.com/bookseries/15179",
       "issn": "2367-3370",
@@ -70,18 +63,12 @@
     {
       "name": "Advances in Intelligent Systems and Computing",
       "abbreviation": "AISC",
-      "dblp_venue": "aisc",
       "springer_series_id": "11156",
       "springer_url": "https://link.springer.com/bookseries/11156",
       "issn": "2194-5357",
       "issn_electronic": "2194-5365"
     }
   ],
-  "dblp_api": {
-    "base_url": "https://dblp.org/search/publ/api",
-    "format": "json",
-    "max_results_per_query": 1000
-  },
   "crossref_api": {
     "base_url": "https://api.crossref.org/works",
     "email": "saripari61@gmail.com",
