@@ -79,3 +79,12 @@ def db_env(test_db, monkeypatch):
     monkeypatch.setenv('DATABASE_URL', test_db)
     yield test_db
 
+
+@pytest.fixture(autouse=True)
+def no_springer_api(monkeypatch):
+    """
+    Tests never call the real Springer API (it spends the daily quota and needs the
+    key from .env). Tests that want it switch it on with their own fake collector.
+    """
+    monkeypatch.setattr('pipeline.runner._get_api_collector', lambda: None)
+    monkeypatch.setattr('pipeline.runner._API_CACHE', {})

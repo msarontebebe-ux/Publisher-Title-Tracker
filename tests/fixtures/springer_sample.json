@@ -1,0 +1,2649 @@
+{
+ "apiMessage": "recorded sample",
+ "query": "type:Book onlinedatefrom:2026-10-10",
+ "result": [
+  {
+   "total": "3244",
+   "start": "26",
+   "pageLength": "25",
+   "recordsDisplayed": "25"
+  }
+ ],
+ "records": [
+  {
+   "contentType": "Chapter ConferencePaper",
+   "identifier": "doi:10.1007/978-3-032-41086-3_52",
+   "language": "en",
+   "title": "Not All Unlabeled Data Are Equal: Unlabeled Data Selection for Semi-supervised QSAR Modeling with Large Chemical Repositories",
+   "creators": [
+    {
+     "creator": "Majer, Oliver"
+    },
+    {
+     "creator": "Džeroski, Sašo",
+     "ORCID": "0000-0003-2363-712X"
+    },
+    {
+     "creator": "Levatić, Jurica",
+     "ORCID": "0000-0002-4025-051X"
+    }
+   ],
+   "bookEditors": [
+    {
+     "bookEditor": "Cerrato, Mattia"
+    },
+    {
+     "bookEditor": "van Rijn, Jan N."
+    },
+    {
+     "bookEditor": "Kramer, Stefan"
+    }
+   ],
+   "publicationName": "Discovery Science",
+   "openaccess": "false",
+   "doi": "10.1007/978-3-032-41086-3_52",
+   "publisher": "Springer",
+   "publisherName": "Springer Nature Switzerland",
+   "publicationDate": "2027-01-01",
+   "publicationType": "Book",
+   "conferenceInfo": [
+    {
+     "confSeriesName": "International Conference on Discovery Science",
+     "confSeriesID": [
+      {
+       "type": "Springer",
+       "value": "dis"
+      },
+      "dis"
+     ],
+     "confEventID": [
+      {
+       "type": "Springer",
+       "value": "dis2026"
+      }
+     ],
+     "confEventAbbreviation": "DS",
+     "confNumber": "29",
+     "confEventLocation": [
+      {
+       "city": "Mainz",
+       "country": [
+        {
+         "code": "DE",
+         "value": "Germany"
+        }
+       ],
+       "locationType": "InPerson"
+      }
+     ],
+     "confEventDateStart": [
+      {
+       "year": "2026",
+       "month": "10",
+       "day": "05"
+      }
+     ],
+     "confEventDateEnd": [
+      {
+       "year": "2026",
+       "month": "10",
+       "day": "09"
+      }
+     ],
+     "confEventURL": "https://discovery-science.org/organizers"
+    }
+   ],
+   "printIsbn": "978-3-032-41085-6",
+   "electronicIsbn": "978-3-032-41086-3",
+   "isbn": "978-3-032-41085-6",
+   "genre": "OriginalPaper Proceedings",
+   "seriesId": "558",
+   "onlineDate": "2026-10-17",
+   "copyright": "©2027 The Editor(s) (if applicable) and The Author(s), under exclusive license to Springer Nature Switzerland AG"
+  },
+  {
+   "contentType": "Chapter ConferencePaper",
+   "identifier": "doi:10.1007/978-3-032-40124-3_13",
+   "language": "en",
+   "title": "Extending a Linear Parallel Bisimulation Algorithm with Multi-way Splitting",
+   "creators": [
+    {
+     "creator": "Heemstra, Jan",
+     "ORCID": "0009-0007-2025-5085"
+    },
+    {
+     "creator": "Wijs, Anton",
+     "ORCID": "0000-0002-2071-9624"
+    }
+   ],
+   "bookEditors": [
+    {
+     "bookEditor": "Margaria, Tiziana"
+    },
+    {
+     "bookEditor": "Steffen, Bernhard"
+    }
+   ],
+   "publicationName": "Leveraging Applications of Formal Methods, Verification and Validation. Scalable Verification and Validation of Concurrent and Distributed Systems",
+   "openaccess": "true",
+   "doi": "10.1007/978-3-032-40124-3_13",
+   "publisher": "Springer",
+   "publisherName": "Springer Nature Switzerland",
+   "publicationDate": "2027-01-01",
+   "publicationType": "Book",
+   "conferenceInfo": [
+    {
+     "confSeriesName": "International Symposium on Leveraging Applications of Formal Methods",
+     "confSeriesID": [
+      {
+       "type": "Springer",
+       "value": "isola"
+      },
+      "isola"
+     ],
+     "confEventID": [
+      {
+       "type": "Springer",
+       "value": "isola2026"
+      }
+     ],
+     "confEventAbbreviation": "ISoLA",
+     "confNumber": "13",
+     "confEventLocation": [
+      {
+       "city": "Kos",
+       "country": [
+        {
+         "code": "GR",
+         "value": "Greece"
+        }
+       ],
+       "locationType": "InPerson"
+      }
+     ],
+     "confEventDateStart": [
+      {
+       "year": "2026",
+       "month": "10",
+       "day": "24"
+      }
+     ],
+     "confEventDateEnd": [
+      {
+       "year": "2026",
+       "month": "10",
+       "day": "28"
+      }
+     ],
+     "confEventURL": "https://2026-isola.isola-conference.org/"
+    }
+   ],
+   "printIsbn": "978-3-032-40123-6",
+   "electronicIsbn": "978-3-032-40124-3",
+   "isbn": "978-3-032-40123-6",
+   "genre": "OriginalPaper Proceedings",
+   "seriesId": "558",
+   "onlineDate": "2026-10-17",
+   "copyright": "©2027 The Editor(s) (if applicable) and The Author(s)"
+  },
+  {
+   "contentType": "Chapter ConferencePaper",
+   "identifier": "doi:10.1007/978-981-92-6857-3_26",
+   "language": "en",
+   "title": "HLS/RTL Hybrid Design for Power Side-Channel Secure Cipher Circuits",
+   "creators": [
+    {
+     "creator": "Yang, Mingyu"
+    },
+    {
+     "creator": "Zheng, Jingyu"
+    },
+    {
+     "creator": "Hara, Yuko"
+    }
+   ],
+   "bookEditors": [
+    {
+     "bookEditor": "Su, Chunhua"
+    },
+    {
+     "bookEditor": "Conti, Mauro"
+    },
+    {
+     "bookEditor": "Cao, Yang"
+    },
+    {
+     "bookEditor": "Omote, Kazumasa"
+    }
+   ],
+   "publicationName": "Information and Communications Security",
+   "openaccess": "false",
+   "doi": "10.1007/978-981-92-6857-3_26",
+   "publisher": "Springer",
+   "publisherName": "Springer Nature Singapore",
+   "publicationDate": "2027-01-01",
+   "publicationType": "Book",
+   "conferenceInfo": [
+    {
+     "confSeriesName": "International Conference on Information and Communications Security",
+     "confSeriesID": [
+      {
+       "type": "Springer",
+       "value": "icics"
+      },
+      "icics"
+     ],
+     "confEventID": [
+      {
+       "type": "Springer",
+       "value": "icics2026"
+      }
+     ],
+     "confEventAbbreviation": "ICICS",
+     "confEventLocation": [
+      {
+       "city": "Fukui",
+       "country": [
+        {
+         "code": "JP",
+         "value": "Japan"
+        }
+       ],
+       "locationType": "InPerson"
+      }
+     ],
+     "confEventDateStart": [
+      {
+       "year": "2026",
+       "month": "10",
+       "day": "27"
+      }
+     ],
+     "confEventDateEnd": [
+      {
+       "year": "2026",
+       "month": "10",
+       "day": "30"
+      }
+     ],
+     "confEventURL": "https://sulab-sever.u-aizu.ac.jp/icics2026/index.html"
+    }
+   ],
+   "printIsbn": "978-981-92-6856-6",
+   "electronicIsbn": "978-981-92-6857-3",
+   "isbn": "978-981-92-6856-6",
+   "genre": "OriginalPaper Proceedings",
+   "seriesId": "558",
+   "onlineDate": "2026-10-17",
+   "copyright": "©2027 The Editor(s) (if applicable) and The Author(s), under exclusive license to Springer Nature Singapore Pte Ltd."
+  },
+  {
+   "contentType": "Chapter ConferencePaper",
+   "identifier": "doi:10.1007/978-3-032-40121-2_7",
+   "language": "en",
+   "title": "Interpretable and Uncertainty-Aware by Construction Decisions with Fuzzy Theory",
+   "creators": [
+    {
+     "creator": "Perez-Palacin, Diego"
+    },
+    {
+     "creator": "Scotti, Vincenzo"
+    },
+    {
+     "creator": "Maleki, Alireza"
+    },
+    {
+     "creator": "Grassi, Vincenzo"
+    },
+    {
+     "creator": "Mirandola, Raffaela"
+    }
+   ],
+   "bookEditors": [
+    {
+     "bookEditor": "Margaria, Tiziana"
+    },
+    {
+     "bookEditor": "Steffen, Bernhard"
+    }
+   ],
+   "publicationName": "Leveraging Applications of Formal Methods, Verification and Validation. X-by-Construction Meets Intersymbolic AI",
+   "openaccess": "true",
+   "doi": "10.1007/978-3-032-40121-2_7",
+   "publisher": "Springer",
+   "publisherName": "Springer Nature Switzerland",
+   "publicationDate": "2027-01-01",
+   "publicationType": "Book",
+   "conferenceInfo": [
+    {
+     "confSeriesName": "International Symposium on Leveraging Applications of Formal Methods",
+     "confSeriesID": [
+      {
+       "type": "Springer",
+       "value": "isola"
+      },
+      "isola"
+     ],
+     "confEventID": [
+      {
+       "type": "Springer",
+       "value": "isola2026"
+      }
+     ],
+     "confEventAbbreviation": "ISoLA",
+     "confNumber": "13",
+     "confEventLocation": [
+      {
+       "city": "Kos",
+       "country": [
+        {
+         "code": "GR",
+         "value": "Greece"
+        }
+       ],
+       "locationType": "InPerson"
+      }
+     ],
+     "confEventDateStart": [
+      {
+       "year": "2026",
+       "month": "10",
+       "day": "24"
+      }
+     ],
+     "confEventDateEnd": [
+      {
+       "year": "2026",
+       "month": "10",
+       "day": "28"
+      }
+     ],
+     "confEventURL": "https://2026-isola.isola-conference.org/"
+    }
+   ],
+   "printIsbn": "978-3-032-40120-5",
+   "electronicIsbn": "978-3-032-40121-2",
+   "isbn": "978-3-032-40120-5",
+   "genre": "OriginalPaper Proceedings",
+   "seriesId": "558",
+   "onlineDate": "2026-10-17",
+   "copyright": "©2027 The Editor(s) (if applicable) and The Author(s)"
+  },
+  {
+   "contentType": "Chapter ConferencePaper",
+   "identifier": "doi:10.1007/978-3-032-41794-7_16",
+   "language": "en",
+   "title": "CSRN-RL: A Reinforcement Learning Extension of CSRN for Multi-agent Task Sharing",
+   "creators": [
+    {
+     "creator": "Hayashi, Hisashi",
+     "ORCID": "0000-0003-2134-8420"
+    }
+   ],
+   "bookEditors": [
+    {
+     "bookEditor": "Mathieu, Philippe"
+    },
+    {
+     "bookEditor": "De la Prieta, Fernando"
+    },
+    {
+     "bookEditor": "Villani, Salvatore"
+    }
+   ],
+   "publicationName": "Advances in Practical Applications of Agentic AI and Multi-Agent Systems, The PAAMS Collection",
+   "openaccess": "false",
+   "doi": "10.1007/978-3-032-41794-7_16",
+   "publisher": "Springer",
+   "publisherName": "Springer Nature Switzerland",
+   "publicationDate": "2027-01-01",
+   "publicationType": "Book",
+   "conferenceInfo": [
+    {
+     "confSeriesName": "International Conference on Practical Applications of Agents and Multi-Agent Systems",
+     "confSeriesID": [
+      {
+       "type": "Springer",
+       "value": "paams"
+      },
+      "paams"
+     ],
+     "confEventID": [
+      {
+       "type": "Springer",
+       "value": "paams2026a"
+      }
+     ],
+     "confEventAbbreviation": "PAAMS",
+     "confNumber": "24",
+     "confEventLocation": [
+      {
+       "city": "Naples",
+       "country": [
+        {
+         "code": "IT",
+         "value": "Italy"
+        }
+       ],
+       "locationType": "InPerson"
+      }
+     ],
+     "confEventDateStart": [
+      {
+       "year": "2026",
+       "month": "10",
+       "day": "21"
+      }
+     ],
+     "confEventDateEnd": [
+      {
+       "year": "2026",
+       "month": "10",
+       "day": "23"
+      }
+     ],
+     "confEventURL": "https://www.paams.net/"
+    }
+   ],
+   "printIsbn": "978-3-032-41793-0",
+   "electronicIsbn": "978-3-032-41794-7",
+   "isbn": "978-3-032-41793-0",
+   "genre": "OriginalPaper Proceedings",
+   "seriesId": "558",
+   "onlineDate": "2026-10-17",
+   "copyright": "©2027 The Editor(s) (if applicable) and The Author(s), under exclusive license to Springer Nature Switzerland AG"
+  },
+  {
+   "contentType": "Chapter ConferencePaper",
+   "identifier": "doi:10.1007/978-3-032-41794-7_24",
+   "language": "en",
+   "title": "Online Change-Point Detection for Cooperative Multi-Agent Reinforcement Learning",
+   "creators": [
+    {
+     "creator": "Saberi Khomami, Fatemeh",
+     "ORCID": "0009-0007-0823-3887"
+    },
+    {
+     "creator": "Vassileva, Julita",
+     "ORCID": "0000-0001-5050-3106"
+    }
+   ],
+   "bookEditors": [
+    {
+     "bookEditor": "Mathieu, Philippe"
+    },
+    {
+     "bookEditor": "De la Prieta, Fernando"
+    },
+    {
+     "bookEditor": "Villani, Salvatore"
+    }
+   ],
+   "publicationName": "Advances in Practical Applications of Agentic AI and Multi-Agent Systems, The PAAMS Collection",
+   "openaccess": "false",
+   "doi": "10.1007/978-3-032-41794-7_24",
+   "publisher": "Springer",
+   "publisherName": "Springer Nature Switzerland",
+   "publicationDate": "2027-01-01",
+   "publicationType": "Book",
+   "conferenceInfo": [
+    {
+     "confSeriesName": "International Conference on Practical Applications of Agents and Multi-Agent Systems",
+     "confSeriesID": [
+      {
+       "type": "Springer",
+       "value": "paams"
+      },
+      "paams"
+     ],
+     "confEventID": [
+      {
+       "type": "Springer",
+       "value": "paams2026a"
+      }
+     ],
+     "confEventAbbreviation": "PAAMS",
+     "confNumber": "24",
+     "confEventLocation": [
+      {
+       "city": "Naples",
+       "country": [
+        {
+         "code": "IT",
+         "value": "Italy"
+        }
+       ],
+       "locationType": "InPerson"
+      }
+     ],
+     "confEventDateStart": [
+      {
+       "year": "2026",
+       "month": "10",
+       "day": "21"
+      }
+     ],
+     "confEventDateEnd": [
+      {
+       "year": "2026",
+       "month": "10",
+       "day": "23"
+      }
+     ],
+     "confEventURL": "https://www.paams.net/"
+    }
+   ],
+   "printIsbn": "978-3-032-41793-0",
+   "electronicIsbn": "978-3-032-41794-7",
+   "isbn": "978-3-032-41793-0",
+   "genre": "OriginalPaper Proceedings",
+   "seriesId": "558",
+   "onlineDate": "2026-10-17",
+   "copyright": "©2027 The Editor(s) (if applicable) and The Author(s), under exclusive license to Springer Nature Switzerland AG"
+  },
+  {
+   "contentType": "Chapter ConferencePaper",
+   "identifier": "doi:10.1007/978-981-92-6857-3_4",
+   "language": "en",
+   "title": "P4-AutoGuard: Scalable DDoS Detection and Mitigation with Aggregate Traffic Features in Programmable Data Planes",
+   "creators": [
+    {
+     "creator": "Wang, Jiayu",
+     "ORCID": "0009-0005-3823-1378"
+    },
+    {
+     "creator": "Li, Lingfang",
+     "ORCID": "0000-0001-6018-5690"
+    },
+    {
+     "creator": "Pan, Heng"
+    },
+    {
+     "creator": "Hu, Weijian"
+    },
+    {
+     "creator": "Wang, Zerun"
+    }
+   ],
+   "bookEditors": [
+    {
+     "bookEditor": "Su, Chunhua"
+    },
+    {
+     "bookEditor": "Conti, Mauro"
+    },
+    {
+     "bookEditor": "Cao, Yang"
+    },
+    {
+     "bookEditor": "Omote, Kazumasa"
+    }
+   ],
+   "publicationName": "Information and Communications Security",
+   "openaccess": "false",
+   "doi": "10.1007/978-981-92-6857-3_4",
+   "publisher": "Springer",
+   "publisherName": "Springer Nature Singapore",
+   "publicationDate": "2027-01-01",
+   "publicationType": "Book",
+   "conferenceInfo": [
+    {
+     "confSeriesName": "International Conference on Information and Communications Security",
+     "confSeriesID": [
+      {
+       "type": "Springer",
+       "value": "icics"
+      },
+      "icics"
+     ],
+     "confEventID": [
+      {
+       "type": "Springer",
+       "value": "icics2026"
+      }
+     ],
+     "confEventAbbreviation": "ICICS",
+     "confEventLocation": [
+      {
+       "city": "Fukui",
+       "country": [
+        {
+         "code": "JP",
+         "value": "Japan"
+        }
+       ],
+       "locationType": "InPerson"
+      }
+     ],
+     "confEventDateStart": [
+      {
+       "year": "2026",
+       "month": "10",
+       "day": "27"
+      }
+     ],
+     "confEventDateEnd": [
+      {
+       "year": "2026",
+       "month": "10",
+       "day": "30"
+      }
+     ],
+     "confEventURL": "https://sulab-sever.u-aizu.ac.jp/icics2026/index.html"
+    }
+   ],
+   "printIsbn": "978-981-92-6856-6",
+   "electronicIsbn": "978-981-92-6857-3",
+   "isbn": "978-981-92-6856-6",
+   "genre": "OriginalPaper Proceedings",
+   "seriesId": "558",
+   "onlineDate": "2026-10-17",
+   "copyright": "©2027 The Editor(s) (if applicable) and The Author(s), under exclusive license to Springer Nature Singapore Pte Ltd."
+  },
+  {
+   "contentType": "Chapter ConferencePaper",
+   "identifier": "doi:10.1007/978-3-032-41794-7_37",
+   "language": "en",
+   "title": "VEsNA Goes Very Fast: Demonstrating Symbolic Racing Agents in a Live Formula One Simulation",
+   "creators": [
+    {
+     "creator": "Nazzaro, Jacopo"
+    },
+    {
+     "creator": "Gatti, Andrea"
+    },
+    {
+     "creator": "Ferrando, Angelo"
+    }
+   ],
+   "bookEditors": [
+    {
+     "bookEditor": "Mathieu, Philippe"
+    },
+    {
+     "bookEditor": "De la Prieta, Fernando"
+    },
+    {
+     "bookEditor": "Villani, Salvatore"
+    }
+   ],
+   "publicationName": "Advances in Practical Applications of Agentic AI and Multi-Agent Systems, The PAAMS Collection",
+   "openaccess": "false",
+   "doi": "10.1007/978-3-032-41794-7_37",
+   "publisher": "Springer",
+   "publisherName": "Springer Nature Switzerland",
+   "publicationDate": "2027-01-01",
+   "publicationType": "Book",
+   "conferenceInfo": [
+    {
+     "confSeriesName": "International Conference on Practical Applications of Agents and Multi-Agent Systems",
+     "confSeriesID": [
+      {
+       "type": "Springer",
+       "value": "paams"
+      },
+      "paams"
+     ],
+     "confEventID": [
+      {
+       "type": "Springer",
+       "value": "paams2026a"
+      }
+     ],
+     "confEventAbbreviation": "PAAMS",
+     "confNumber": "24",
+     "confEventLocation": [
+      {
+       "city": "Naples",
+       "country": [
+        {
+         "code": "IT",
+         "value": "Italy"
+        }
+       ],
+       "locationType": "InPerson"
+      }
+     ],
+     "confEventDateStart": [
+      {
+       "year": "2026",
+       "month": "10",
+       "day": "21"
+      }
+     ],
+     "confEventDateEnd": [
+      {
+       "year": "2026",
+       "month": "10",
+       "day": "23"
+      }
+     ],
+     "confEventURL": "https://www.paams.net/"
+    }
+   ],
+   "printIsbn": "978-3-032-41793-0",
+   "electronicIsbn": "978-3-032-41794-7",
+   "isbn": "978-3-032-41793-0",
+   "genre": "OriginalPaper Proceedings",
+   "seriesId": "558",
+   "onlineDate": "2026-10-17",
+   "copyright": "©2027 The Editor(s) (if applicable) and The Author(s), under exclusive license to Springer Nature Switzerland AG"
+  },
+  {
+   "contentType": "Chapter",
+   "identifier": "doi:10.1007/978-3-662-74188-7_7",
+   "language": "en",
+   "title": "Inflammatory and Infiltrative Cardiomyopathies",
+   "creators": [
+    {
+     "creator": "Carli, Marcelo"
+    },
+    {
+     "creator": "Giubbini, Raffaele",
+     "ORCID": "0000-0003-4275-2799"
+    },
+    {
+     "creator": "Raggi, Paolo"
+    },
+    {
+     "creator": "Williams, Michelle"
+    },
+    {
+     "creator": "Paez, Diana"
+    },
+    {
+     "creator": "Dondi, Maurizio"
+    },
+    {
+     "creator": "Divakaran, Sanjay"
+    }
+   ],
+   "bookEditors": [
+    {
+     "bookEditor": "Di Carli, Marcelo"
+    },
+    {
+     "bookEditor": "Dondi, Maurizio"
+    },
+    {
+     "bookEditor": "Giubbini, Raffaele"
+    },
+    {
+     "bookEditor": "Paez, Diana"
+    },
+    {
+     "bookEditor": "Raggi, Paolo"
+    },
+    {
+     "bookEditor": "Williams, Michelle"
+    }
+   ],
+   "publicationName": "IAEA Atlas of Cardiac PET/CT",
+   "openaccess": "true",
+   "doi": "10.1007/978-3-662-74188-7_7",
+   "publisher": "Springer",
+   "publisherName": "Springer Berlin Heidelberg",
+   "publicationDate": "2027-01-01",
+   "publicationType": "Book",
+   "conferenceInfo": [],
+   "printIsbn": "978-3-662-74187-0",
+   "electronicIsbn": "978-3-662-74188-7",
+   "isbn": "978-3-662-74187-0",
+   "genre": "OriginalPaper Professional book",
+   "onlineDate": "2026-10-17",
+   "copyright": "©2027 IAEA: International Atomic Energy Agency"
+  },
+  {
+   "contentType": "Chapter ConferencePaper",
+   "identifier": "doi:10.1007/978-3-032-42763-2_14",
+   "language": "en",
+   "title": "Low-Latency Autonomous Navigation: Monolithic Edge AI Architecture with Sim2Real Validation",
+   "creators": [
+    {
+     "creator": "Rebollar Cervantes, Michael G."
+    },
+    {
+     "creator": "Zarazua, Miguel A. I."
+    },
+    {
+     "creator": "Gonzalez Benitez, Erik L."
+    },
+    {
+     "creator": "Carrera Alva, Angel E."
+    },
+    {
+     "creator": "Sanchez, Erick Ruiz"
+    }
+   ],
+   "bookEditors": [
+    {
+     "bookEditor": "Mata-Rivera, Miguel-Félix"
+    },
+    {
+     "bookEditor": "Zagal-Flores, Roberto"
+    },
+    {
+     "bookEditor": "Barria-Huidobro, Cristian"
+    }
+   ],
+   "publicationName": "Telematics and Computing",
+   "openaccess": "false",
+   "doi": "10.1007/978-3-032-42763-2_14",
+   "publisher": "Springer",
+   "publisherName": "Springer Nature Switzerland",
+   "publicationDate": "2027-01-01",
+   "publicationType": "Book",
+   "conferenceInfo": [
+    {
+     "confSeriesName": "International Congress of Telematics and Computing",
+     "confSeriesID": {
+      "type": "Springer",
+      "value": "witcom"
+     },
+     "confEventID": [
+      {
+       "type": "Springer",
+       "value": "witcom2026"
+      }
+     ],
+     "confEventAbbreviation": "WITCOM",
+     "confNumber": "15",
+     "confEventLocation": [
+      {
+       "city": "Huatulco",
+       "country": [
+        {
+         "code": "MX",
+         "value": "Mexico"
+        }
+       ],
+       "locationType": "InPerson"
+      }
+     ],
+     "confEventDateStart": [
+      {
+       "year": "2026",
+       "month": "11",
+       "day": "02"
+      }
+     ],
+     "confEventDateEnd": [
+      {
+       "year": "2026",
+       "month": "11",
+       "day": "06"
+      }
+     ],
+     "confEventURL": "https://witcom.upiita.ipn.mx/"
+    }
+   ],
+   "printIsbn": "978-3-032-42762-5",
+   "electronicIsbn": "978-3-032-42763-2",
+   "isbn": "978-3-032-42762-5",
+   "genre": "OriginalPaper Proceedings",
+   "seriesId": "7899",
+   "onlineDate": "2026-10-17",
+   "copyright": "©2027 The Editor(s) (if applicable) and The Author(s), under exclusive license to Springer Nature Switzerland AG"
+  },
+  {
+   "contentType": "Chapter",
+   "identifier": "doi:10.1007/978-3-658-52900-0_10",
+   "language": "de",
+   "title": "Akteure der Tarifpolitik: Arbeitgeberverbände und Gewerkschaften",
+   "creators": [
+    {
+     "creator": "Haipeter, Thomas"
+    }
+   ],
+   "bookEditors": [
+    {
+     "bookEditor": "Bosch, Gerhard"
+    },
+    {
+     "bookEditor": "Schulten, Thorsten"
+    },
+    {
+     "bookEditor": "Hüttenhoff, Frederic"
+    }
+   ],
+   "publicationName": "Tarifautonomie und Tarifbindung stärken",
+   "openaccess": "true",
+   "doi": "10.1007/978-3-658-52900-0_10",
+   "publisher": "Springer",
+   "publisherName": "Springer Fachmedien Wiesbaden",
+   "publicationDate": "2027-01-01",
+   "publicationType": "Book",
+   "conferenceInfo": [],
+   "printIsbn": "978-3-658-52899-7",
+   "electronicIsbn": "978-3-658-52900-0",
+   "isbn": "978-3-658-52899-7",
+   "genre": "OriginalPaper Contributed volume",
+   "onlineDate": "2026-10-17",
+   "copyright": "©2027 Der/die Herausgeber bzw. der/die Autor(en)"
+  },
+  {
+   "contentType": "Chapter ConferencePaper",
+   "identifier": "doi:10.1007/978-3-032-42763-2_22",
+   "language": "en",
+   "title": "Characterization of the One-Dimensional Wavelet Profilometry Method with Comparison of Phase Unwrapping Algorithms",
+   "creators": [
+    {
+     "creator": "Alvarado Jasso, Regina",
+     "ORCID": "0009-0006-7884-108X"
+    },
+    {
+     "creator": "Lopez Torres, Claudia Victoria",
+     "ORCID": "0000-0003-1266-3875"
+    },
+    {
+     "creator": "Pedraza Ortega, Jesus Carlos",
+     "ORCID": "0000-0001-5125-8907"
+    },
+    {
+     "creator": "Ramos Arreguín, Juan Manuel",
+     "ORCID": "0000-0002-2604-9692"
+    },
+    {
+     "creator": "Aceves Fernandez, Marco Antonio",
+     "ORCID": "0000-0002-5455-0329"
+    },
+    {
+     "creator": "Tovar Arriaga, Saul",
+     "ORCID": "0000-0002-2695-1934"
+    }
+   ],
+   "bookEditors": [
+    {
+     "bookEditor": "Mata-Rivera, Miguel-Félix"
+    },
+    {
+     "bookEditor": "Zagal-Flores, Roberto"
+    },
+    {
+     "bookEditor": "Barria-Huidobro, Cristian"
+    }
+   ],
+   "publicationName": "Telematics and Computing",
+   "openaccess": "false",
+   "doi": "10.1007/978-3-032-42763-2_22",
+   "publisher": "Springer",
+   "publisherName": "Springer Nature Switzerland",
+   "publicationDate": "2027-01-01",
+   "publicationType": "Book",
+   "conferenceInfo": [
+    {
+     "confSeriesName": "International Congress of Telematics and Computing",
+     "confSeriesID": {
+      "type": "Springer",
+      "value": "witcom"
+     },
+     "confEventID": [
+      {
+       "type": "Springer",
+       "value": "witcom2026"
+      }
+     ],
+     "confEventAbbreviation": "WITCOM",
+     "confNumber": "15",
+     "confEventLocation": [
+      {
+       "city": "Huatulco",
+       "country": [
+        {
+         "code": "MX",
+         "value": "Mexico"
+        }
+       ],
+       "locationType": "InPerson"
+      }
+     ],
+     "confEventDateStart": [
+      {
+       "year": "2026",
+       "month": "11",
+       "day": "02"
+      }
+     ],
+     "confEventDateEnd": [
+      {
+       "year": "2026",
+       "month": "11",
+       "day": "06"
+      }
+     ],
+     "confEventURL": "https://witcom.upiita.ipn.mx/"
+    }
+   ],
+   "printIsbn": "978-3-032-42762-5",
+   "electronicIsbn": "978-3-032-42763-2",
+   "isbn": "978-3-032-42762-5",
+   "genre": "OriginalPaper Proceedings",
+   "seriesId": "7899",
+   "onlineDate": "2026-10-17",
+   "copyright": "©2027 The Editor(s) (if applicable) and The Author(s), under exclusive license to Springer Nature Switzerland AG"
+  },
+  {
+   "contentType": "Chapter ConferencePaper",
+   "identifier": "doi:10.1007/978-3-032-42763-2_30",
+   "language": "en",
+   "title": "ADS-B Based Tracking System for Public Aircraft Surveillance",
+   "creators": [
+    {
+     "creator": "Solis-Pinto, Gabriel"
+    },
+    {
+     "creator": "Quintero, Rolando",
+     "ORCID": "0000-0003-4454-8791"
+    },
+    {
+     "creator": "Guzman Sanchez-Mejorada, Carlos",
+     "ORCID": "0000-0001-6935-2870"
+    },
+    {
+     "creator": "Torres, Miguel",
+     "ORCID": "0000-0001-8289-6979"
+    }
+   ],
+   "bookEditors": [
+    {
+     "bookEditor": "Mata-Rivera, Miguel-Félix"
+    },
+    {
+     "bookEditor": "Zagal-Flores, Roberto"
+    },
+    {
+     "bookEditor": "Barria-Huidobro, Cristian"
+    }
+   ],
+   "publicationName": "Telematics and Computing",
+   "openaccess": "false",
+   "doi": "10.1007/978-3-032-42763-2_30",
+   "publisher": "Springer",
+   "publisherName": "Springer Nature Switzerland",
+   "publicationDate": "2027-01-01",
+   "publicationType": "Book",
+   "conferenceInfo": [
+    {
+     "confSeriesName": "International Congress of Telematics and Computing",
+     "confSeriesID": {
+      "type": "Springer",
+      "value": "witcom"
+     },
+     "confEventID": [
+      {
+       "type": "Springer",
+       "value": "witcom2026"
+      }
+     ],
+     "confEventAbbreviation": "WITCOM",
+     "confNumber": "15",
+     "confEventLocation": [
+      {
+       "city": "Huatulco",
+       "country": [
+        {
+         "code": "MX",
+         "value": "Mexico"
+        }
+       ],
+       "locationType": "InPerson"
+      }
+     ],
+     "confEventDateStart": [
+      {
+       "year": "2026",
+       "month": "11",
+       "day": "02"
+      }
+     ],
+     "confEventDateEnd": [
+      {
+       "year": "2026",
+       "month": "11",
+       "day": "06"
+      }
+     ],
+     "confEventURL": "https://witcom.upiita.ipn.mx/"
+    }
+   ],
+   "printIsbn": "978-3-032-42762-5",
+   "electronicIsbn": "978-3-032-42763-2",
+   "isbn": "978-3-032-42762-5",
+   "genre": "OriginalPaper Proceedings",
+   "seriesId": "7899",
+   "onlineDate": "2026-10-17",
+   "copyright": "©2027 The Editor(s) (if applicable) and The Author(s), under exclusive license to Springer Nature Switzerland AG"
+  },
+  {
+   "contentType": "Chapter ConferencePaper",
+   "identifier": "doi:10.1007/978-3-032-40124-3_9",
+   "language": "en",
+   "title": "The 1CPLT Project: Scaling Up Choreographic Programming",
+   "creators": [
+    {
+     "creator": "Jongmans, Sung-Shik",
+     "ORCID": "0000-0002-4394-8745"
+    }
+   ],
+   "bookEditors": [
+    {
+     "bookEditor": "Margaria, Tiziana"
+    },
+    {
+     "bookEditor": "Steffen, Bernhard"
+    }
+   ],
+   "publicationName": "Leveraging Applications of Formal Methods, Verification and Validation. Scalable Verification and Validation of Concurrent and Distributed Systems",
+   "openaccess": "true",
+   "doi": "10.1007/978-3-032-40124-3_9",
+   "publisher": "Springer",
+   "publisherName": "Springer Nature Switzerland",
+   "publicationDate": "2027-01-01",
+   "publicationType": "Book",
+   "conferenceInfo": [
+    {
+     "confSeriesName": "International Symposium on Leveraging Applications of Formal Methods",
+     "confSeriesID": [
+      {
+       "type": "Springer",
+       "value": "isola"
+      },
+      "isola"
+     ],
+     "confEventID": [
+      {
+       "type": "Springer",
+       "value": "isola2026"
+      }
+     ],
+     "confEventAbbreviation": "ISoLA",
+     "confNumber": "13",
+     "confEventLocation": [
+      {
+       "city": "Kos",
+       "country": [
+        {
+         "code": "GR",
+         "value": "Greece"
+        }
+       ],
+       "locationType": "InPerson"
+      }
+     ],
+     "confEventDateStart": [
+      {
+       "year": "2026",
+       "month": "10",
+       "day": "24"
+      }
+     ],
+     "confEventDateEnd": [
+      {
+       "year": "2026",
+       "month": "10",
+       "day": "28"
+      }
+     ],
+     "confEventURL": "https://2026-isola.isola-conference.org/"
+    }
+   ],
+   "printIsbn": "978-3-032-40123-6",
+   "electronicIsbn": "978-3-032-40124-3",
+   "isbn": "978-3-032-40123-6",
+   "genre": "OriginalPaper Proceedings",
+   "seriesId": "558",
+   "onlineDate": "2026-10-17",
+   "copyright": "©2027 The Editor(s) (if applicable) and The Author(s)"
+  },
+  {
+   "contentType": "Chapter ConferencePaper",
+   "identifier": "doi:10.1007/978-981-92-6834-4_19",
+   "language": "en",
+   "title": "SL-DNPR: A Protocol-Aware Open-Set Radio Frequency Fingerprint Identification Framework for WiFi Scenarios",
+   "creators": [
+    {
+     "creator": "Sun, Shuzhen"
+    },
+    {
+     "creator": "Li, Yutong"
+    },
+    {
+     "creator": "Jin, Lishan"
+    },
+    {
+     "creator": "Su, Junbo"
+    },
+    {
+     "creator": "Cao, Jinhui"
+    },
+    {
+     "creator": "Di, Xiaoqiang"
+    },
+    {
+     "creator": "Qi, Hui"
+    }
+   ],
+   "bookEditors": [
+    {
+     "bookEditor": "Su, Chunhua"
+    },
+    {
+     "bookEditor": "Conti, Mauro"
+    },
+    {
+     "bookEditor": "Cao, Yang"
+    },
+    {
+     "bookEditor": "Omote, Kazumasa"
+    }
+   ],
+   "publicationName": "Information and Communications Security",
+   "openaccess": "false",
+   "doi": "10.1007/978-981-92-6834-4_19",
+   "publisher": "Springer",
+   "publisherName": "Springer Nature Singapore",
+   "publicationDate": "2027-01-01",
+   "publicationType": "Book",
+   "conferenceInfo": [
+    {
+     "confSeriesName": "International Conference on Information and Communications Security",
+     "confSeriesID": [
+      {
+       "type": "Springer",
+       "value": "icics"
+      },
+      "icics"
+     ],
+     "confEventID": [
+      {
+       "type": "Springer",
+       "value": "icics2026"
+      }
+     ],
+     "confEventAbbreviation": "ICICS",
+     "confEventLocation": [
+      {
+       "city": "Fukui",
+       "country": [
+        {
+         "code": "JP",
+         "value": "Japan"
+        }
+       ],
+       "locationType": "InPerson"
+      }
+     ],
+     "confEventDateStart": [
+      {
+       "year": "2026",
+       "month": "10",
+       "day": "27"
+      }
+     ],
+     "confEventDateEnd": [
+      {
+       "year": "2026",
+       "month": "10",
+       "day": "30"
+      }
+     ],
+     "confEventURL": "https://sulab-sever.u-aizu.ac.jp/icics2026/index.html"
+    }
+   ],
+   "printIsbn": "978-981-92-6833-7",
+   "electronicIsbn": "978-981-92-6834-4",
+   "isbn": "978-981-92-6833-7",
+   "genre": "OriginalPaper Proceedings",
+   "seriesId": "558",
+   "onlineDate": "2026-10-17",
+   "copyright": "©2027 The Editor(s) (if applicable) and The Author(s), under exclusive license to Springer Nature Singapore Pte Ltd."
+  },
+  {
+   "contentType": "Chapter ConferencePaper",
+   "identifier": "doi:10.1007/978-3-032-37679-4_32",
+   "language": "en",
+   "title": "MultiSigBERT: Beyond Survival Analysis Through Multimodal and Sequential Modeling in Oncology",
+   "creators": [
+    {
+     "creator": "Minchella, Paul"
+    },
+    {
+     "creator": "Chrétien, Stéphane"
+    },
+    {
+     "creator": "Metzler, Guillaume"
+    },
+    {
+     "creator": "Verlingue, Loic"
+    },
+    {
+     "creator": "Vaucher, Rémi"
+    }
+   ],
+   "bookEditors": [
+    {
+     "bookEditor": "Ceci, Michelangelo"
+    },
+    {
+     "bookEditor": "Kocev, Dragi"
+    },
+    {
+     "bookEditor": "Monreale, Anna"
+    },
+    {
+     "bookEditor": "Vens, Celine"
+    },
+    {
+     "bookEditor": "Baratchi, Mitra"
+    },
+    {
+     "bookEditor": "Bonchi, Francesco"
+    },
+    {
+     "bookEditor": "Guidotti, Riccardo"
+    },
+    {
+     "bookEditor": "Gullo, Francesco"
+    },
+    {
+     "bookEditor": "Flach, Peter"
+    },
+    {
+     "bookEditor": "Manco, Giuseppe"
+    },
+    {
+     "bookEditor": "Spiliopoulou, Myra"
+    },
+    {
+     "bookEditor": "Masciari, Elio"
+    }
+   ],
+   "publicationName": "Machine Learning and Knowledge Discovery in Databases. Research Track and Applied Data Science Track",
+   "openaccess": "false",
+   "doi": "10.1007/978-3-032-37679-4_32",
+   "publisher": "Springer",
+   "publisherName": "Springer Nature Switzerland",
+   "publicationDate": "2027-01-01",
+   "publicationType": "Book",
+   "conferenceInfo": [
+    {
+     "confSeriesName": "Joint European Conference on Machine Learning and Knowledge Discovery in Databases",
+     "confSeriesID": [
+      {
+       "type": "Springer",
+       "value": "ecml"
+      },
+      "ecml"
+     ],
+     "confEventID": [
+      {
+       "type": "Springer",
+       "value": "ecml2026"
+      }
+     ],
+     "confEventAbbreviation": "ECML PKDD",
+     "confNumber": "26",
+     "confEventLocation": [
+      {
+       "city": "Naples",
+       "country": [
+        {
+         "code": "IT",
+         "value": "Italy"
+        }
+       ],
+       "locationType": "InPerson"
+      }
+     ],
+     "confEventDateStart": [
+      {
+       "year": "2026",
+       "month": "09",
+       "day": "07"
+      }
+     ],
+     "confEventDateEnd": [
+      {
+       "year": "2026",
+       "month": "09",
+       "day": "11"
+      }
+     ],
+     "confEventURL": "https://ecmlpkdd.org/2026/"
+    }
+   ],
+   "printIsbn": "978-3-032-37678-7",
+   "electronicIsbn": "978-3-032-37679-4",
+   "isbn": "978-3-032-37678-7",
+   "genre": "OriginalPaper Proceedings",
+   "seriesId": "558",
+   "onlineDate": "2026-10-17",
+   "copyright": "©2027 The Editor(s) (if applicable) and The Author(s), under exclusive license to Springer Nature Switzerland AG"
+  },
+  {
+   "contentType": "Chapter ConferencePaper",
+   "identifier": "doi:10.1007/978-3-032-41086-3_40",
+   "language": "en",
+   "title": "HyBiEn: Hybrid Bipolar Ensembles for Imbalanced Regression",
+   "creators": [
+    {
+     "creator": "Wibbeke, Jelke",
+     "ORCID": "0000-0002-0728-0071"
+    },
+    {
+     "creator": "Ribeiro, Rita P.",
+     "ORCID": "0000-0002-6852-8077"
+    },
+    {
+     "creator": "Rohjans, Sebastian",
+     "ORCID": "0009-0004-6875-7912"
+    },
+    {
+     "creator": "Rauh, Andreas",
+     "ORCID": "0000-0002-1548-6547"
+    }
+   ],
+   "bookEditors": [
+    {
+     "bookEditor": "Cerrato, Mattia"
+    },
+    {
+     "bookEditor": "van Rijn, Jan N."
+    },
+    {
+     "bookEditor": "Kramer, Stefan"
+    }
+   ],
+   "publicationName": "Discovery Science",
+   "openaccess": "false",
+   "doi": "10.1007/978-3-032-41086-3_40",
+   "publisher": "Springer",
+   "publisherName": "Springer Nature Switzerland",
+   "publicationDate": "2027-01-01",
+   "publicationType": "Book",
+   "conferenceInfo": [
+    {
+     "confSeriesName": "International Conference on Discovery Science",
+     "confSeriesID": [
+      {
+       "type": "Springer",
+       "value": "dis"
+      },
+      "dis"
+     ],
+     "confEventID": [
+      {
+       "type": "Springer",
+       "value": "dis2026"
+      }
+     ],
+     "confEventAbbreviation": "DS",
+     "confNumber": "29",
+     "confEventLocation": [
+      {
+       "city": "Mainz",
+       "country": [
+        {
+         "code": "DE",
+         "value": "Germany"
+        }
+       ],
+       "locationType": "InPerson"
+      }
+     ],
+     "confEventDateStart": [
+      {
+       "year": "2026",
+       "month": "10",
+       "day": "05"
+      }
+     ],
+     "confEventDateEnd": [
+      {
+       "year": "2026",
+       "month": "10",
+       "day": "09"
+      }
+     ],
+     "confEventURL": "https://discovery-science.org/organizers"
+    }
+   ],
+   "printIsbn": "978-3-032-41085-6",
+   "electronicIsbn": "978-3-032-41086-3",
+   "isbn": "978-3-032-41085-6",
+   "genre": "OriginalPaper Proceedings",
+   "seriesId": "558",
+   "onlineDate": "2026-10-17",
+   "copyright": "©2027 The Editor(s) (if applicable) and The Author(s), under exclusive license to Springer Nature Switzerland AG"
+  },
+  {
+   "contentType": "Chapter ConferencePaper",
+   "identifier": "doi:10.1007/978-3-032-41086-3_36",
+   "language": "en",
+   "title": "Ordered-LRP: Structured Sparsity Patterns from Unstructured Pruning",
+   "creators": [
+    {
+     "creator": "Manuel, Guilherme",
+     "ORCID": "0009-0009-9284-2427"
+    },
+    {
+     "creator": "Jorge, Alípio"
+    },
+    {
+     "creator": "Barbosa, Luís Wolffrom"
+    },
+    {
+     "creator": "Pedroso, João Pedro"
+    },
+    {
+     "creator": "Gouveia, Sónia"
+    }
+   ],
+   "bookEditors": [
+    {
+     "bookEditor": "Cerrato, Mattia"
+    },
+    {
+     "bookEditor": "van Rijn, Jan N."
+    },
+    {
+     "bookEditor": "Kramer, Stefan"
+    }
+   ],
+   "publicationName": "Discovery Science",
+   "openaccess": "false",
+   "doi": "10.1007/978-3-032-41086-3_36",
+   "publisher": "Springer",
+   "publisherName": "Springer Nature Switzerland",
+   "publicationDate": "2027-01-01",
+   "publicationType": "Book",
+   "conferenceInfo": [
+    {
+     "confSeriesName": "International Conference on Discovery Science",
+     "confSeriesID": [
+      {
+       "type": "Springer",
+       "value": "dis"
+      },
+      "dis"
+     ],
+     "confEventID": [
+      {
+       "type": "Springer",
+       "value": "dis2026"
+      }
+     ],
+     "confEventAbbreviation": "DS",
+     "confNumber": "29",
+     "confEventLocation": [
+      {
+       "city": "Mainz",
+       "country": [
+        {
+         "code": "DE",
+         "value": "Germany"
+        }
+       ],
+       "locationType": "InPerson"
+      }
+     ],
+     "confEventDateStart": [
+      {
+       "year": "2026",
+       "month": "10",
+       "day": "05"
+      }
+     ],
+     "confEventDateEnd": [
+      {
+       "year": "2026",
+       "month": "10",
+       "day": "09"
+      }
+     ],
+     "confEventURL": "https://discovery-science.org/organizers"
+    }
+   ],
+   "printIsbn": "978-3-032-41085-6",
+   "electronicIsbn": "978-3-032-41086-3",
+   "isbn": "978-3-032-41085-6",
+   "genre": "OriginalPaper Proceedings",
+   "seriesId": "558",
+   "onlineDate": "2026-10-17",
+   "copyright": "©2027 The Editor(s) (if applicable) and The Author(s), under exclusive license to Springer Nature Switzerland AG"
+  },
+  {
+   "contentType": "Chapter ConferencePaper",
+   "identifier": "doi:10.1007/978-3-032-41960-6_26",
+   "language": "en",
+   "title": "Typographic Attack Detection in Large Vision-Language Models via Attention-Level Evidential Conflict",
+   "creators": [
+    {
+     "creator": "Liu, Xiaofei",
+     "ORCID": "0009-0004-1608-2116"
+    },
+    {
+     "creator": "Huang, Tao",
+     "ORCID": "0000-0001-9853-1261"
+    },
+    {
+     "creator": "Wang, Rui",
+     "ORCID": "0000-0002-7121-9574"
+    },
+    {
+     "creator": "Jing, Liping",
+     "ORCID": "0000-0003-2160-1721"
+    }
+   ],
+   "bookEditors": [
+    {
+     "bookEditor": "Denœux, Thierry"
+    },
+    {
+     "bookEditor": "Jousselme, Anne-Laure"
+    },
+    {
+     "bookEditor": "Su, Zhi-Gang"
+    }
+   ],
+   "publicationName": "Belief Functions: Theory and Applications",
+   "openaccess": "false",
+   "doi": "10.1007/978-3-032-41960-6_26",
+   "publisher": "Springer",
+   "publisherName": "Springer Nature Switzerland",
+   "publicationDate": "2027-01-01",
+   "publicationType": "Book",
+   "conferenceInfo": [
+    {
+     "confSeriesName": "International Conference on Belief Functions",
+     "confSeriesID": [
+      {
+       "type": "Springer",
+       "value": "belief"
+      },
+      "belief"
+     ],
+     "confEventID": [
+      {
+       "type": "Springer",
+       "value": "belief2026"
+      }
+     ],
+     "confEventAbbreviation": "BELIEF",
+     "confNumber": "9",
+     "confEventLocation": [
+      {
+       "city": "Nanjing",
+       "country": [
+        {
+         "code": "CN",
+         "value": "China"
+        }
+       ],
+       "locationType": "InPerson"
+      }
+     ],
+     "confEventDateStart": [
+      {
+       "year": "2026",
+       "month": "10",
+       "day": "19"
+      }
+     ],
+     "confEventDateEnd": [
+      {
+       "year": "2026",
+       "month": "10",
+       "day": "21"
+      }
+     ],
+     "confEventURL": "https://www.bfasociety.org/Belief2026/index.html"
+    }
+   ],
+   "printIsbn": "978-3-032-41959-0",
+   "electronicIsbn": "978-3-032-41960-6",
+   "isbn": "978-3-032-41959-0",
+   "genre": "OriginalPaper Proceedings",
+   "seriesId": "558",
+   "onlineDate": "2026-10-17",
+   "copyright": "©2027 The Editor(s) (if applicable) and The Author(s), under exclusive license to Springer Nature Switzerland AG"
+  },
+  {
+   "contentType": "Chapter ConferencePaper",
+   "identifier": "doi:10.1007/978-981-92-6857-3_14",
+   "language": "en",
+   "title": "Digital Twin Degradation: Detecting Cyber–Physical Attacks via Temporal Inconsistencies",
+   "creators": [
+    {
+     "creator": "Kampourakis, Konstantinos E.",
+     "ORCID": "0009-0000-8883-0735"
+    },
+    {
+     "creator": "Gkioulos, Vasileios",
+     "ORCID": "0000-0001-7304-3835"
+    },
+    {
+     "creator": "Katsikas, Sokratis",
+     "ORCID": "0000-0003-2966-9683"
+    }
+   ],
+   "bookEditors": [
+    {
+     "bookEditor": "Su, Chunhua"
+    },
+    {
+     "bookEditor": "Conti, Mauro"
+    },
+    {
+     "bookEditor": "Cao, Yang"
+    },
+    {
+     "bookEditor": "Omote, Kazumasa"
+    }
+   ],
+   "publicationName": "Information and Communications Security",
+   "openaccess": "false",
+   "doi": "10.1007/978-981-92-6857-3_14",
+   "publisher": "Springer",
+   "publisherName": "Springer Nature Singapore",
+   "publicationDate": "2027-01-01",
+   "publicationType": "Book",
+   "conferenceInfo": [
+    {
+     "confSeriesName": "International Conference on Information and Communications Security",
+     "confSeriesID": [
+      {
+       "type": "Springer",
+       "value": "icics"
+      },
+      "icics"
+     ],
+     "confEventID": [
+      {
+       "type": "Springer",
+       "value": "icics2026"
+      }
+     ],
+     "confEventAbbreviation": "ICICS",
+     "confEventLocation": [
+      {
+       "city": "Fukui",
+       "country": [
+        {
+         "code": "JP",
+         "value": "Japan"
+        }
+       ],
+       "locationType": "InPerson"
+      }
+     ],
+     "confEventDateStart": [
+      {
+       "year": "2026",
+       "month": "10",
+       "day": "27"
+      }
+     ],
+     "confEventDateEnd": [
+      {
+       "year": "2026",
+       "month": "10",
+       "day": "30"
+      }
+     ],
+     "confEventURL": "https://sulab-sever.u-aizu.ac.jp/icics2026/index.html"
+    }
+   ],
+   "printIsbn": "978-981-92-6856-6",
+   "electronicIsbn": "978-981-92-6857-3",
+   "isbn": "978-981-92-6856-6",
+   "genre": "OriginalPaper Proceedings",
+   "seriesId": "558",
+   "onlineDate": "2026-10-17",
+   "copyright": "©2027 The Editor(s) (if applicable) and The Author(s), under exclusive license to Springer Nature Singapore Pte Ltd."
+  },
+  {
+   "contentType": "Chapter ConferencePaper",
+   "identifier": "doi:10.1007/978-3-032-37679-4_9",
+   "language": "en",
+   "title": "Modeling Matches as Language: A Generative Transformer Approach for Counterfactual Player Valuation In Football",
+   "creators": [
+    {
+     "creator": "Hong, Miru"
+    },
+    {
+     "creator": "Lee, Minho"
+    },
+    {
+     "creator": "Jo, Geonhee"
+    },
+    {
+     "creator": "Cho, Hyeokje"
+    },
+    {
+     "creator": "Kim, Hyunsung"
+    },
+    {
+     "creator": "Bauer, Pascal"
+    },
+    {
+     "creator": "Ko, Sang-Ki"
+    }
+   ],
+   "bookEditors": [
+    {
+     "bookEditor": "Ceci, Michelangelo"
+    },
+    {
+     "bookEditor": "Kocev, Dragi"
+    },
+    {
+     "bookEditor": "Monreale, Anna"
+    },
+    {
+     "bookEditor": "Vens, Celine"
+    },
+    {
+     "bookEditor": "Baratchi, Mitra"
+    },
+    {
+     "bookEditor": "Bonchi, Francesco"
+    },
+    {
+     "bookEditor": "Guidotti, Riccardo"
+    },
+    {
+     "bookEditor": "Gullo, Francesco"
+    },
+    {
+     "bookEditor": "Flach, Peter"
+    },
+    {
+     "bookEditor": "Manco, Giuseppe"
+    },
+    {
+     "bookEditor": "Spiliopoulou, Myra"
+    },
+    {
+     "bookEditor": "Masciari, Elio"
+    }
+   ],
+   "publicationName": "Machine Learning and Knowledge Discovery in Databases. Research Track and Applied Data Science Track",
+   "openaccess": "false",
+   "doi": "10.1007/978-3-032-37679-4_9",
+   "publisher": "Springer",
+   "publisherName": "Springer Nature Switzerland",
+   "publicationDate": "2027-01-01",
+   "publicationType": "Book",
+   "conferenceInfo": [
+    {
+     "confSeriesName": "Joint European Conference on Machine Learning and Knowledge Discovery in Databases",
+     "confSeriesID": [
+      {
+       "type": "Springer",
+       "value": "ecml"
+      },
+      "ecml"
+     ],
+     "confEventID": [
+      {
+       "type": "Springer",
+       "value": "ecml2026"
+      }
+     ],
+     "confEventAbbreviation": "ECML PKDD",
+     "confNumber": "26",
+     "confEventLocation": [
+      {
+       "city": "Naples",
+       "country": [
+        {
+         "code": "IT",
+         "value": "Italy"
+        }
+       ],
+       "locationType": "InPerson"
+      }
+     ],
+     "confEventDateStart": [
+      {
+       "year": "2026",
+       "month": "09",
+       "day": "07"
+      }
+     ],
+     "confEventDateEnd": [
+      {
+       "year": "2026",
+       "month": "09",
+       "day": "11"
+      }
+     ],
+     "confEventURL": "https://ecmlpkdd.org/2026/"
+    }
+   ],
+   "printIsbn": "978-3-032-37678-7",
+   "electronicIsbn": "978-3-032-37679-4",
+   "isbn": "978-3-032-37678-7",
+   "genre": "OriginalPaper Proceedings",
+   "seriesId": "558",
+   "onlineDate": "2026-10-17",
+   "copyright": "©2027 The Editor(s) (if applicable) and The Author(s), under exclusive license to Springer Nature Switzerland AG"
+  },
+  {
+   "contentType": "Chapter ConferencePaper",
+   "identifier": "doi:10.1007/978-3-032-40121-2_4",
+   "language": "en",
+   "title": "Realisability-Driven Repair of Natural-Language Requirements via Neuro-Symbolic Reasoning",
+   "creators": [
+    {
+     "creator": "Liu, Tianhai",
+     "ORCID": "0000-0001-5881-1920"
+    },
+    {
+     "creator": "Bremer, Andreas",
+     "ORCID": "0009-0007-9480-1050"
+    },
+    {
+     "creator": "Panov, Ivan",
+     "ORCID": "0009-0001-7249-3006"
+    },
+    {
+     "creator": "Weigl, Alexander",
+     "ORCID": "0000-0001-8446-4598"
+    },
+    {
+     "creator": "Tyszberowicz, Shmuel",
+     "ORCID": "0000-0003-4937-8138"
+    },
+    {
+     "creator": "Beckert, Bernhard",
+     "ORCID": "0000-0002-9672-3291"
+    }
+   ],
+   "bookEditors": [
+    {
+     "bookEditor": "Margaria, Tiziana"
+    },
+    {
+     "bookEditor": "Steffen, Bernhard"
+    }
+   ],
+   "publicationName": "Leveraging Applications of Formal Methods, Verification and Validation. X-by-Construction Meets Intersymbolic AI",
+   "openaccess": "true",
+   "doi": "10.1007/978-3-032-40121-2_4",
+   "publisher": "Springer",
+   "publisherName": "Springer Nature Switzerland",
+   "publicationDate": "2027-01-01",
+   "publicationType": "Book",
+   "conferenceInfo": [
+    {
+     "confSeriesName": "International Symposium on Leveraging Applications of Formal Methods",
+     "confSeriesID": [
+      {
+       "type": "Springer",
+       "value": "isola"
+      },
+      "isola"
+     ],
+     "confEventID": [
+      {
+       "type": "Springer",
+       "value": "isola2026"
+      }
+     ],
+     "confEventAbbreviation": "ISoLA",
+     "confNumber": "13",
+     "confEventLocation": [
+      {
+       "city": "Kos",
+       "country": [
+        {
+         "code": "GR",
+         "value": "Greece"
+        }
+       ],
+       "locationType": "InPerson"
+      }
+     ],
+     "confEventDateStart": [
+      {
+       "year": "2026",
+       "month": "10",
+       "day": "24"
+      }
+     ],
+     "confEventDateEnd": [
+      {
+       "year": "2026",
+       "month": "10",
+       "day": "28"
+      }
+     ],
+     "confEventURL": "https://2026-isola.isola-conference.org/"
+    }
+   ],
+   "printIsbn": "978-3-032-40120-5",
+   "electronicIsbn": "978-3-032-40121-2",
+   "isbn": "978-3-032-40120-5",
+   "genre": "OriginalPaper Proceedings",
+   "seriesId": "558",
+   "onlineDate": "2026-10-17",
+   "copyright": "©2027 The Editor(s) (if applicable) and The Author(s)"
+  },
+  {
+   "contentType": "Chapter ConferencePaper",
+   "identifier": "doi:10.1007/978-981-92-6857-3_27",
+   "language": "en",
+   "title": "Rank-Based Distribution Reshaping for Robust EM/Power Fusion in Side-Channel Analysis Across Sampling Rates",
+   "creators": [
+    {
+     "creator": "Wang, Linfeng"
+    },
+    {
+     "creator": "Song, Jiacheng"
+    },
+    {
+     "creator": "Huang, Xiaoran"
+    },
+    {
+     "creator": "Cheng, Wei"
+    },
+    {
+     "creator": "Ming, Jingdian"
+    },
+    {
+     "creator": "Zhou, Yongbin"
+    }
+   ],
+   "bookEditors": [
+    {
+     "bookEditor": "Su, Chunhua"
+    },
+    {
+     "bookEditor": "Conti, Mauro"
+    },
+    {
+     "bookEditor": "Cao, Yang"
+    },
+    {
+     "bookEditor": "Omote, Kazumasa"
+    }
+   ],
+   "publicationName": "Information and Communications Security",
+   "openaccess": "false",
+   "doi": "10.1007/978-981-92-6857-3_27",
+   "publisher": "Springer",
+   "publisherName": "Springer Nature Singapore",
+   "publicationDate": "2027-01-01",
+   "publicationType": "Book",
+   "conferenceInfo": [
+    {
+     "confSeriesName": "International Conference on Information and Communications Security",
+     "confSeriesID": [
+      {
+       "type": "Springer",
+       "value": "icics"
+      },
+      "icics"
+     ],
+     "confEventID": [
+      {
+       "type": "Springer",
+       "value": "icics2026"
+      }
+     ],
+     "confEventAbbreviation": "ICICS",
+     "confEventLocation": [
+      {
+       "city": "Fukui",
+       "country": [
+        {
+         "code": "JP",
+         "value": "Japan"
+        }
+       ],
+       "locationType": "InPerson"
+      }
+     ],
+     "confEventDateStart": [
+      {
+       "year": "2026",
+       "month": "10",
+       "day": "27"
+      }
+     ],
+     "confEventDateEnd": [
+      {
+       "year": "2026",
+       "month": "10",
+       "day": "30"
+      }
+     ],
+     "confEventURL": "https://sulab-sever.u-aizu.ac.jp/icics2026/index.html"
+    }
+   ],
+   "printIsbn": "978-981-92-6856-6",
+   "electronicIsbn": "978-981-92-6857-3",
+   "isbn": "978-981-92-6856-6",
+   "genre": "OriginalPaper Proceedings",
+   "seriesId": "558",
+   "onlineDate": "2026-10-17",
+   "copyright": "©2027 The Editor(s) (if applicable) and The Author(s), under exclusive license to Springer Nature Singapore Pte Ltd."
+  },
+  {
+   "contentType": "Chapter",
+   "identifier": "doi:10.1007/978-3-032-26012-3_3",
+   "language": "en",
+   "title": "Tactics of Laziness: Shifting Class Politics and the Kairos of Antiwork",
+   "creators": [
+    {
+     "creator": "Chase, Josh"
+    },
+    {
+     "creator": "Heilig, Leah",
+     "ORCID": "0000-0002-7949-7886"
+    }
+   ],
+   "publicationName": "Rhetorics and Tactics of Antiwork",
+   "openaccess": "true",
+   "doi": "10.1007/978-3-032-26012-3_3",
+   "publisher": "Springer",
+   "publisherName": "Springer Nature Switzerland",
+   "publicationDate": "2027-01-01",
+   "publicationType": "Book",
+   "conferenceInfo": [],
+   "printIsbn": "978-3-032-26011-6",
+   "electronicIsbn": "978-3-032-26012-3",
+   "isbn": "978-3-032-26011-6",
+   "genre": "OriginalPaper Brief/Pivot",
+   "onlineDate": "2026-10-17",
+   "copyright": "©2027 The Editor(s) (if applicable) and The Author(s)"
+  },
+  {
+   "contentType": "Chapter ConferencePaper",
+   "identifier": "doi:10.1007/978-981-92-6857-3_1",
+   "language": "en",
+   "title": "Hierarchical Website Fingerprinting: Incorporating Multi-page Traffic Features via Cross-Attention and Evidential Fusion",
+   "creators": [
+    {
+     "creator": "Li, Fangzhe",
+     "ORCID": "0009-0001-0636-6690"
+    },
+    {
+     "creator": "Peng, Lizhi",
+     "ORCID": "0000-0002-6009-522X"
+    },
+    {
+     "creator": "Yang, Bo",
+     "ORCID": "0000-0002-6866-6082"
+    },
+    {
+     "creator": "Jiao, Liang",
+     "ORCID": "0009-0008-8942-7268"
+    },
+    {
+     "creator": "Li, Rui"
+    }
+   ],
+   "bookEditors": [
+    {
+     "bookEditor": "Su, Chunhua"
+    },
+    {
+     "bookEditor": "Conti, Mauro"
+    },
+    {
+     "bookEditor": "Cao, Yang"
+    },
+    {
+     "bookEditor": "Omote, Kazumasa"
+    }
+   ],
+   "publicationName": "Information and Communications Security",
+   "openaccess": "false",
+   "doi": "10.1007/978-981-92-6857-3_1",
+   "publisher": "Springer",
+   "publisherName": "Springer Nature Singapore",
+   "publicationDate": "2027-01-01",
+   "publicationType": "Book",
+   "conferenceInfo": [
+    {
+     "confSeriesName": "International Conference on Information and Communications Security",
+     "confSeriesID": [
+      {
+       "type": "Springer",
+       "value": "icics"
+      },
+      "icics"
+     ],
+     "confEventID": [
+      {
+       "type": "Springer",
+       "value": "icics2026"
+      }
+     ],
+     "confEventAbbreviation": "ICICS",
+     "confEventLocation": [
+      {
+       "city": "Fukui",
+       "country": [
+        {
+         "code": "JP",
+         "value": "Japan"
+        }
+       ],
+       "locationType": "InPerson"
+      }
+     ],
+     "confEventDateStart": [
+      {
+       "year": "2026",
+       "month": "10",
+       "day": "27"
+      }
+     ],
+     "confEventDateEnd": [
+      {
+       "year": "2026",
+       "month": "10",
+       "day": "30"
+      }
+     ],
+     "confEventURL": "https://sulab-sever.u-aizu.ac.jp/icics2026/index.html"
+    }
+   ],
+   "printIsbn": "978-981-92-6856-6",
+   "electronicIsbn": "978-981-92-6857-3",
+   "isbn": "978-981-92-6856-6",
+   "genre": "OriginalPaper Proceedings",
+   "seriesId": "558",
+   "onlineDate": "2026-10-17",
+   "copyright": "©2027 The Editor(s) (if applicable) and The Author(s), under exclusive license to Springer Nature Singapore Pte Ltd."
+  }
+ ],
+ "facets": [
+  {
+   "name": "subject",
+   "values": [
+    {
+     "value": "Computer Science",
+     "count": "1075"
+    },
+    {
+     "value": "Engineering",
+     "count": "747"
+    },
+    {
+     "value": "Artificial Intelligence",
+     "count": "683"
+    },
+    {
+     "value": "Computer Applications",
+     "count": "494"
+    },
+    {
+     "value": "Software Engineering/Programming and Operating Systems",
+     "count": "391"
+    },
+    {
+     "value": "Computer Communication Networks",
+     "count": "349"
+    },
+    {
+     "value": "Data Mining and Knowledge Discovery",
+     "count": "310"
+    },
+    {
+     "value": "Computational Intelligence",
+     "count": "262"
+    },
+    {
+     "value": "Building Construction and Design",
+     "count": "251"
+    },
+    {
+     "value": "Social Sciences",
+     "count": "236"
+    },
+    {
+     "value": "Statistics, general",
+     "count": "226"
+    },
+    {
+     "value": "Computer System Implementation",
+     "count": "224"
+    },
+    {
+     "value": "Data Structures and Information Theory",
+     "count": "217"
+    },
+    {
+     "value": "Social Sciences, general",
+     "count": "206"
+    },
+    {
+     "value": "Sustainable Development",
+     "count": "206"
+    },
+    {
+     "value": "Data Engineering",
+     "count": "198"
+    },
+    {
+     "value": "Environmental Economics",
+     "count": "189"
+    },
+    {
+     "value": "Medicine & Public Health",
+     "count": "187"
+    },
+    {
+     "value": "Computer Imaging, Vision, Pattern Recognition and Graphics",
+     "count": "185"
+    },
+    {
+     "value": "Database Management",
+     "count": "180"
+    }
+   ]
+  },
+  {
+   "name": "keyword",
+   "values": [
+    {
+     "value": "Artificial Intelligence",
+     "count": "42"
+    },
+    {
+     "value": "Large Language Models",
+     "count": "39"
+    },
+    {
+     "value": "Circular Economy",
+     "count": "31"
+    },
+    {
+     "value": "Machine Learning",
+     "count": "30"
+    },
+    {
+     "value": "Artificial intelligence",
+     "count": "27"
+    },
+    {
+     "value": "Ewing sarcoma",
+     "count": "27"
+    },
+    {
+     "value": "Machine learning",
+     "count": "27"
+    },
+    {
+     "value": "CommTech",
+     "count": "26"
+    },
+    {
+     "value": "Large language models",
+     "count": "25"
+    },
+    {
+     "value": "Deep Learning",
+     "count": "23"
+    },
+    {
+     "value": "Sustainability",
+     "count": "23"
+    },
+    {
+     "value": "Unternehmenskommunikation",
+     "count": "21"
+    },
+    {
+     "value": "Agentic AI",
+     "count": "20"
+    },
+    {
+     "value": "Life Cycle Assessment",
+     "count": "17"
+    },
+    {
+     "value": "Explainable AI",
+     "count": "16"
+    },
+    {
+     "value": "IoT",
+     "count": "16"
+    },
+    {
+     "value": "Deep learning",
+     "count": "15"
+    },
+    {
+     "value": "Multi-Agent Systems",
+     "count": "15"
+    },
+    {
+     "value": "Blockchain",
+     "count": "13"
+    },
+    {
+     "value": "Mass spectrometry",
+     "count": "13"
+    }
+   ]
+  },
+  {
+   "name": "pub",
+   "values": [
+    {
+     "value": "ReShaping the Built Environment through Sustainability and Circularity",
+     "count": "179"
+    },
+    {
+     "value": "Handbuch Methoden der empirischen Sozialforschung",
+     "count": "140"
+    },
+    {
+     "value": "Proceedings of the 5th International Conference on Mathematical Modeling and Computational Science",
+     "count": "137"
+    },
+    {
+     "value": "Statistical Science: From Theory to Applied Research I",
+     "count": "86"
+    },
+    {
+     "value": "Resilience, Multi-risk Assessment and Monitoring",
+     "count": "84"
+    },
+    {
+     "value": "Information and Communications Security",
+     "count": "72"
+    },
+    {
+     "value": "Man-Machine-Environment System Engineering",
+     "count": "70"
+    },
+    {
+     "value": "Dynamics of Hybrid Collaborative Networks",
+     "count": "69"
+    },
+    {
+     "value": "Springer Handbook of Data Engineering",
+     "count": "60"
+    },
+    {
+     "value": "Applied Computer Sciences in Engineering",
+     "count": "59"
+    },
+    {
+     "value": "Dictionary of Disability and Biomedical Research",
+     "count": "52"
+    },
+    {
+     "value": "Discovery Science",
+     "count": "52"
+    },
+    {
+     "value": "Anästhesie, Intensivmedizin, Notfallmedizin, Schmerztherapie",
+     "count": "45"
+    },
+    {
+     "value": "Integrated Uncertainty in Knowledge Modelling and Decision Making",
+     "count": "42"
+    },
+    {
+     "value": "Recent Developments in Structural Engineering",
+     "count": "42"
+    },
+    {
+     "value": "Similarity Search and Applications",
+     "count": "42"
+    },
+    {
+     "value": "Advances in Practical Applications of Agentic AI and Multi-Agent Systems, The PAAMS Collection",
+     "count": "41"
+    },
+    {
+     "value": "Proceedings of the International Conference on Artificial Intelligence and Machine Learning for Agro-Ecosystems (ICAIML-AE 2026)",
+     "count": "41"
+    },
+    {
+     "value": "Body Area Networks",
+     "count": "40"
+    },
+    {
+     "value": "Machine Learning and Knowledge Discovery in Databases. Research Track and Applied Data Science Track",
+     "count": "40"
+    }
+   ]
+  },
+  {
+   "name": "year",
+   "values": [
+    {
+     "value": "2027",
+     "count": "1337"
+    },
+    {
+     "value": "2026",
+     "count": "1880"
+    },
+    {
+     "value": "2025",
+     "count": "11"
+    },
+    {
+     "value": "2024",
+     "count": "2"
+    },
+    {
+     "value": "2014",
+     "count": "12"
+    },
+    {
+     "value": "2013",
+     "count": "1"
+    },
+    {
+     "value": "2011",
+     "count": "1"
+    }
+   ]
+  },
+  {
+   "name": "country",
+   "values": [
+    {
+     "value": "Germany",
+     "count": "686"
+    },
+    {
+     "value": "Italy",
+     "count": "334"
+    },
+    {
+     "value": "India",
+     "count": "295"
+    },
+    {
+     "value": "China",
+     "count": "291"
+    },
+    {
+     "value": "United States",
+     "count": "284"
+    },
+    {
+     "value": "United Kingdom",
+     "count": "185"
+    },
+    {
+     "value": "France",
+     "count": "127"
+    },
+    {
+     "value": "Spain",
+     "count": "125"
+    },
+    {
+     "value": "Austria",
+     "count": "110"
+    },
+    {
+     "value": "Japan",
+     "count": "88"
+    },
+    {
+     "value": "Portugal",
+     "count": "83"
+    },
+    {
+     "value": "Canada",
+     "count": "78"
+    },
+    {
+     "value": "Indonesia",
+     "count": "70"
+    },
+    {
+     "value": "Brazil",
+     "count": "69"
+    },
+    {
+     "value": "Netherlands",
+     "count": "66"
+    },
+    {
+     "value": "Vietnam",
+     "count": "62"
+    },
+    {
+     "value": "Colombia",
+     "count": "61"
+    },
+    {
+     "value": "Mexico",
+     "count": "61"
+    },
+    {
+     "value": "Australia",
+     "count": "59"
+    },
+    {
+     "value": "Switzerland",
+     "count": "58"
+    }
+   ]
+  },
+  {
+   "name": "type",
+   "values": [
+    {
+     "value": "Book",
+     "count": "3244"
+    }
+   ]
+  }
+ ]
+}

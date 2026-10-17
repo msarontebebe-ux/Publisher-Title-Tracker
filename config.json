@@ -69,6 +69,14 @@
       "issn_electronic": "2194-5365"
     }
   ],
+  "springer_api": {
+    "enabled": true,
+    "daily_limit": 500,
+    "reserve": 25,
+    "page_size": 25,
+    "initial_days": 7,
+    "note": "Meta API (Basic plan): early detection of new volumes plus proceedings label and conference data. CrossRef stays the source for title, editors and ISBN. Needs SPRINGER_API_KEY; without it only CrossRef is used."
+  },
   "crossref_api": {
     "base_url": "https://api.crossref.org/works",
     "email": "saripari61@gmail.com",

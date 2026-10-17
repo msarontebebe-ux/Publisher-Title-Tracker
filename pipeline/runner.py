@@ -81,8 +81,8 @@ SilverResult = namedtuple('SilverResult',
 
 
 EventResult = namedtuple('EventResult',
-                         ['added', 'updated', 'unchanged', 'failed', 'baseline'],
-                         defaults=(0,))
+                         ['added', 'updated', 'unchanged', 'failed', 'baseline', 'updated_dois'],
+                         defaults=(0, ()))
 
 
 def _write_events(publications, series_name: str, stored_before=None) -> "EventResult":
@@ -120,6 +120,7 @@ def _write_events(publications, series_name: str, stored_before=None) -> "EventR
 
     added = updated = unchanged = baseline = 0
     failed = 0
+    updated_dois = []
     stored_before = stored_before or set()
 
     # Load the last-known fingerprint for every DOI we're about to process, so
@@ -213,6 +214,7 @@ def _write_events(publications, series_name: str, stored_before=None) -> "EventR
                 baseline += 1
             else:
                 updated += 1
+                updated_dois.append(doi)
             # Update our in-memory view so multiple records for the same DOI
             # within one run don't each look "new".
             last_hash[doi] = current_hash
@@ -228,7 +230,8 @@ def _write_events(publications, series_name: str, stored_before=None) -> "EventR
     print(f"   Events: added={added}  updated={updated}  baseline={baseline}  unchanged={unchanged}"
           + (f"  FAILED" if failed else ""))
     return EventResult(added=added, updated=updated, unchanged=unchanged,
-                       failed=failed, baseline=baseline)
+                       failed=failed, baseline=baseline,
+                       updated_dois=tuple(updated_dois) if not failed else ())
 
 
 def _write_silver(publications, series_name: str) -> "SilverResult":
@@ -463,6 +466,162 @@ def _drop_old_untracked(publications, new_since: str, stored: set):
     return kept, dropped
 
 
+# ---------------------------------------------------------------------------
+# Springer Meta API: early detection, merged into the CrossRef records
+# ---------------------------------------------------------------------------
+
+API_MAX_CHAPTERS = 5000        # chapters per run; Basic plan = 25 per call, 500 calls/day
+_API_CACHE: dict = {}          # watermark date -> volumes; the API is asked once per process
+_EVENT_FIELDS = ('event_name', 'event_location', 'event_date_start', 'event_date_end',
+                 'event_year', 'event_month', 'event_date_confidence')
+
+
+def _get_api_collector():
+    """The Springer API collector, or None when it is off / has no key."""
+    from pipeline.collectors import build_springer_api_collector
+    return build_springer_api_collector(load_config())
+
+
+def _springer_api_volumes(from_created_date):
+    """Volumes of all tracked Springer series that the Meta API saw since the watermark."""
+    if from_created_date in _API_CACHE:
+        return _API_CACHE[from_created_date]
+    pubs = []
+    try:
+        collector = _get_api_collector()
+        if collector:
+            pubs, _ = collector.fetch(from_created_date=from_created_date,
+                                      max_results=API_MAX_CHAPTERS)
+    except Exception as exc:
+        print(f"  Springer API unavailable ({type(exc).__name__}) - CrossRef only for this run")
+    _API_CACHE[from_created_date] = pubs
+    return pubs
+
+
+def merge_api_volumes(crossref_pubs, api_pubs, since=None):
+    """
+    Combine CrossRef records with the volumes the Springer API reported.
+
+    CrossRef stays the authority for title, editors and ISBN (the API only has the
+    short book name). For a volume both sources know, the API adds the proceedings
+    label and the structured conference data. A volume only the API knows (it is
+    not in CrossRef yet) enters as an API record and is completed by CrossRef later.
+
+    A volume from an older year than the window is dropped: a late chapter of an old
+    book is not a new title. Returns the merged list.
+    """
+    by_doi = {p.doi.lower(): p for p in crossref_pubs if p.doi}
+    min_year = int(since[:4]) - 1 if since else None
+    merged, early, enriched = list(crossref_pubs), 0, 0
+    for api in api_pubs:
+        if min_year and api.year and api.year < min_year:
+            continue
+        base = by_doi.get(api.doi.lower())
+        if base is None:
+            merged.append(api)
+            early += 1
+            continue
+        if api.work_type == 'proceedings':
+            base.work_type = 'proceedings'
+        if api.event_date_start:
+            for field in _EVENT_FIELDS:
+                setattr(base, field, getattr(api, field))
+        enriched += 1
+    if api_pubs:
+        print(f"  Springer API: {early} volume(s) not in CrossRef yet, "
+              f"{enriched} enriched with proceedings label and conference data")
+    return merged
+
+
+def _keep_enrichment(publications):
+    """
+    Never lose what the API added. A later CrossRef-only record has no conference data
+    and says 'book', so it would look like a change that wipes the enrichment. When the
+    stored title has conference data (or is a proceedings volume) and the new record
+    does not, carry the stored values over. CrossRef data of its own still wins.
+    """
+    from pipeline.db import DatabaseConfig
+    from sqlalchemy import text as sa_text
+
+    dois = [p.doi for p in publications if p.doi]
+    if not dois:
+        return
+    session = DatabaseConfig.get_session()
+    try:
+        rows = session.execute(sa_text(
+            'SELECT doi, work_type, event_name, event_location, event_date_start, '
+            'event_date_end, event_year, event_month, event_date_confidence '
+            'FROM publications WHERE doi = ANY(:dois) AND '
+            "(event_date_start IS NOT NULL OR work_type = 'proceedings')"),
+            {'dois': dois}).fetchall()
+    finally:
+        session.close()
+    stored = {r[0]: r for r in rows}
+    for pub in publications:
+        row = stored.get(pub.doi)
+        if row is None:
+            continue
+        if row[1] == 'proceedings' and pub.work_type == 'book':
+            pub.work_type = 'proceedings'
+        if row[4] is not None and not pub.event_date_start:
+            (pub.event_name, pub.event_location, start, end, pub.event_year,
+             pub.event_month, pub.event_date_confidence) = row[2:9]
+            pub.event_date_start = start.isoformat() if start else None
+            pub.event_date_end = end.isoformat() if end else None
+
+
+_SILVER_FIELDS = ('title', 'year', 'volume', 'pages', 'isbn', 'publisher', 'work_type',
+                  'event_name', 'event_location', 'event_year', 'event_month',
+                  'event_date_confidence')
+
+
+def _update_silver(publications) -> int:
+    """
+    Copy the new content of changed titles (title.updated) into `publications`, so the
+    web page and API show what the event log says. Authors/editors are replaced when
+    they changed. Returns how many rows were updated.
+    """
+    from datetime import date
+    from pipeline.db import DatabaseConfig
+    from pipeline.models import Publication, Author
+
+    session = DatabaseConfig.get_session()
+    count = 0
+    try:
+        for pub in publications:
+            row = session.query(Publication).filter_by(doi=pub.doi).first()
+            if row is None:
+                continue
+            data = pub.to_dict()
+            for field in _SILVER_FIELDS:
+                setattr(row, field, data.get(field))
+            row.url = data.get('ee') or data.get('url')
+            for field in ('event_date_start', 'event_date_end'):
+                setattr(row, field, date.fromisoformat(data[field]) if data.get(field) else None)
+            names = list(dict.fromkeys(
+                (a['name'] or '').strip() for a in data.get('authors', []) if (a['name'] or '').strip()))
+            if names and names != [a.name for a in row.authors]:
+                new = []
+                for name in names:
+                    author = session.query(Author).filter_by(name=name).first()
+                    if author is None:
+                        author = Author(name=name)
+                        session.add(author)
+                    new.append(author)
+                row.authors = new
+            count += 1
+        session.commit()
+    except Exception as exc:
+        session.rollback()
+        print(f"   Silver update failed: {exc}")
+        return 0
+    finally:
+        session.close()
+    if count:
+        print(f"   Silver: updated {count} changed title(s)")
+    return count
+
+
 def _persist_and_log(publications, raw_data, name: str, abbr: str, started,
                      run_type: str, storage, set_series: bool = True,
                      fetch_ok: bool = True, new_since: str = None):
@@ -486,6 +645,11 @@ def _persist_and_log(publications, raw_data, name: str, abbr: str, started,
     stored_before = set()
     if publications and _db_configured():
         stored_before = _stored_dois(publications)
+        # A volume only the Springer API reported, but which is already stored, is not
+        # new and its short API content must not replace what is there.
+        publications = [p for p in publications
+                        if not (p.source == 'springer-api' and p.doi in stored_before)]
+        _keep_enrichment(publications)
         if new_since:
             publications, skipped_old = _drop_old_untracked(
                 publications, new_since, stored_before)
@@ -505,6 +669,9 @@ def _persist_and_log(publications, raw_data, name: str, abbr: str, started,
             # Append change events (title.added / title.updated). This is an
             # additive projection — it never affects the silver write above.
             events = _write_events(publications, name, stored_before)
+            if events.updated_dois:
+                changed = set(events.updated_dois)
+                _update_silver([p for p in publications if p.doi in changed])
             _refresh_gold(name)
 
             # Truthful status: a batch that failed to commit means the run was
@@ -647,6 +814,11 @@ def scrape_single_series(series_config: dict, scraper: CrossRefScraper,
             _log_pipeline_run(name, 0, 0, 'failed', error=str(exc),
                               started_at=started, run_type=run_type)
         raise
+
+    if run_type == 'incremental':
+        # Springer's own API sees new volumes before CrossRef registers them.
+        api_pubs = [p for p in _springer_api_volumes(from_created_date) if p.series == name]
+        publications = merge_api_volumes(publications, api_pubs, since=from_created_date)
 
     _persist_and_log(publications, raw_data, name, abbr, started, run_type, storage,
                      fetch_ok=getattr(scraper, 'fetch_ok', True) is not False,
