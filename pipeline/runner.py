@@ -81,10 +81,11 @@ SilverResult = namedtuple('SilverResult',
 
 
 EventResult = namedtuple('EventResult',
-                         ['added', 'updated', 'unchanged', 'failed'])
+                         ['added', 'updated', 'unchanged', 'failed', 'baseline'],
+                         defaults=(0,))
 
 
-def _write_events(publications, series_name: str) -> "EventResult":
+def _write_events(publications, series_name: str, stored_before=None) -> "EventResult":
     """
     Append change events (title.added / title.updated) to the events log.
 
@@ -97,13 +98,19 @@ def _write_events(publications, series_name: str) -> "EventResult":
     payload_hash) constraint via INSERT ... ON CONFLICT DO NOTHING, so
     re-running over unchanged data adds zero events. See pipeline/events.py.
 
-    Returns an EventResult(added, updated, unchanged, failed) so the caller can
-    log truthfully and the evaluation chapter can measure add-vs-update rates.
+    `stored_before` holds the DOIs that were already in `publications` before
+    this run wrote anything. A DOI in it that has no event yet is recorded as a
+    quiet title.baseline, not announced as title.added.
+
+    Returns an EventResult(added, updated, unchanged, failed, baseline) so the
+    caller can log truthfully and the evaluation chapter can measure add-vs-update
+    rates.
     """
     from pipeline.db import DatabaseConfig
     from pipeline.models import TitleEvent
     from pipeline.events import (
         payload_hash, canonical_record, classify_event_type, new_event_id,
+        fingerprint_of_stored,
     )
     from sqlalchemy import text as sa_text
 
@@ -111,8 +118,9 @@ def _write_events(publications, series_name: str) -> "EventResult":
     if not pub_dicts:
         return EventResult(added=0, updated=0, unchanged=0, failed=0)
 
-    added = updated = unchanged = 0
+    added = updated = unchanged = baseline = 0
     failed = 0
+    stored_before = stored_before or set()
 
     # Load the last-known fingerprint for every DOI we're about to process, so
     # we can tell "new" from "changed" from "same" in plain Python.
@@ -127,12 +135,14 @@ def _write_events(publications, series_name: str) -> "EventResult":
             # ignores which source wrote the last event; filtering by source
             # would report an already-known title as new.
             rows = session.execute(sa_text("""
-                SELECT DISTINCT ON (source_record_id) source_record_id, payload_hash
+                SELECT DISTINCT ON (source_record_id) source_record_id, payload_hash, payload
                 FROM events
                 WHERE source_record_id = ANY(:dois)
                 ORDER BY source_record_id, id DESC
             """), {'dois': dois}).fetchall()
-            last_hash = {row[0]: row[1] for row in rows}
+            # Re-hash each stored payload with today's rules (see
+            # fingerprint_of_stored) so a pure encoding difference is not a change.
+            last_hash = {row[0]: fingerprint_of_stored(row[2], row[1]) for row in rows}
     finally:
         session.close()
 
@@ -147,7 +157,8 @@ def _write_events(publications, series_name: str) -> "EventResult":
                 continue
 
             existing_hash = last_hash.get(doi)
-            event_type = classify_event_type(pub_data, existing_hash)
+            event_type = classify_event_type(pub_data, existing_hash,
+                                             baseline=doi in stored_before)
             if event_type is None:
                 unchanged += 1
                 continue
@@ -198,6 +209,8 @@ def _write_events(publications, series_name: str) -> "EventResult":
 
             if event_type == 'title.added':
                 added += 1
+            elif event_type == 'title.baseline':
+                baseline += 1
             else:
                 updated += 1
             # Update our in-memory view so multiple records for the same DOI
@@ -212,9 +225,10 @@ def _write_events(publications, series_name: str) -> "EventResult":
     finally:
         session.close()
 
-    print(f"   Events: added={added}  updated={updated}  unchanged={unchanged}"
+    print(f"   Events: added={added}  updated={updated}  baseline={baseline}  unchanged={unchanged}"
           + (f"  FAILED" if failed else ""))
-    return EventResult(added=added, updated=updated, unchanged=unchanged, failed=failed)
+    return EventResult(added=added, updated=updated, unchanged=unchanged,
+                       failed=failed, baseline=baseline)
 
 
 def _write_silver(publications, series_name: str) -> "SilverResult":
@@ -400,9 +414,58 @@ def _log_pipeline_run(series: str, records_fetched: int, records_new: int,
         print(f"   Pipeline log failed: {exc}")
 
 
+# Titles created up to this many days before the window start still count as new.
+# The watermark is a date and CrossRef can index a record a little after it was
+# created, so a strict cut could lose a title registered just before midnight.
+NEW_TITLE_GRACE_DAYS = 2
+
+
+def _stored_dois(publications) -> set:
+    """DOIs of this batch that are already in `publications`.
+
+    Must be called BEFORE the silver write: afterwards every title of the batch
+    is stored, and a legacy title could no longer be told from a new one.
+    """
+    from pipeline.db import DatabaseConfig
+    from sqlalchemy import text as sa_text
+
+    dois = [p.doi for p in publications if p.doi]
+    if not dois:
+        return set()
+    session = DatabaseConfig.get_session()
+    try:
+        rows = session.execute(sa_text(
+            'SELECT doi FROM publications WHERE doi = ANY(:dois)'), {'dois': dois}).fetchall()
+        return {row[0] for row in rows}
+    finally:
+        session.close()
+
+
+def _drop_old_untracked(publications, new_since: str, stored: set):
+    """
+    Incremental runs ask CrossRef for everything DEPOSITED or UPDATED since the
+    watermark. That includes old titles which were merely touched and that this
+    system never stored; announcing them as new would be wrong. A record is
+    dropped when its CrossRef `created` date is older than the window and it is
+    not stored. Records without a created date (IEEE API) are kept.
+
+    Returns (kept, number_dropped).
+    """
+    from datetime import date, timedelta
+    cutoff = (date.fromisoformat(new_since[:10]) - timedelta(days=NEW_TITLE_GRACE_DAYS)).isoformat()
+    kept, dropped = [], 0
+    for pub in publications:
+        created = (pub.created or '')[:10]
+        if created and created < cutoff and pub.doi not in stored:
+            dropped += 1
+        else:
+            kept.append(pub)
+    return kept, dropped
+
+
 def _persist_and_log(publications, raw_data, name: str, abbr: str, started,
                      run_type: str, storage, set_series: bool = True,
-                     fetch_ok: bool = True):
+                     fetch_ok: bool = True, new_since: str = None):
     """
     Shared write path for every tracked stream (Springer series or publisher):
     Bronze -> Silver -> Events -> Gold -> run log -> watermark.
@@ -410,11 +473,25 @@ def _persist_and_log(publications, raw_data, name: str, abbr: str, started,
     `name` is the stream name used as pipeline_runs.series, the watermark key
     and (when set_series) the publications.series value. fetch_ok=False means
     the fetch was incomplete: the run is logged 'partial' and the watermark
-    stays put so the same window is retried.
+    stays put so the same window is retried. `new_since` is the watermark date of
+    an incremental run: older titles that are not stored yet are skipped.
     """
+    fetched_total = len(publications)
     if publications and set_series:
         for pub in publications:
             pub.series = name
+
+    # Remember what was stored BEFORE anything is written, then drop old titles
+    # that CrossRef merely re-deposited and this system never tracked.
+    stored_before = set()
+    if publications and _db_configured():
+        stored_before = _stored_dois(publications)
+        if new_since:
+            publications, skipped_old = _drop_old_untracked(
+                publications, new_since, stored_before)
+            if skipped_old:
+                print(f"  Skipped {skipped_old} older title(s): updated at the source "
+                      f"but never tracked here")
 
     if publications:
         records_new = 0
@@ -427,7 +504,7 @@ def _persist_and_log(publications, raw_data, name: str, abbr: str, started,
             records_new = silver.inserted
             # Append change events (title.added / title.updated). This is an
             # additive projection — it never affects the silver write above.
-            events = _write_events(publications, name)
+            events = _write_events(publications, name, stored_before)
             _refresh_gold(name)
 
             # Truthful status: a batch that failed to commit means the run was
@@ -443,7 +520,7 @@ def _persist_and_log(publications, raw_data, name: str, abbr: str, started,
                 status = 'success'
                 error_msg = None
 
-            _log_pipeline_run(name, len(publications), records_new, status,
+            _log_pipeline_run(name, fetched_total, records_new, status,
                               error=error_msg,
                               started_at=started, run_type=run_type)
             # Advance the watermark ONLY on a fully successful incremental run,
@@ -454,7 +531,7 @@ def _persist_and_log(publications, raw_data, name: str, abbr: str, started,
                 new_wm = advance_watermark(name, when=_utcnow())
                 if new_wm:
                     print(f"  Watermark advanced to {new_wm.isoformat()}")
-            print(f"Done: {abbr}: {len(publications)} fetched, {records_new} new, "
+            print(f"Done: {abbr}: {fetched_total} fetched, {records_new} new, "
                   f"{silver.skipped} skipped, status={status}")
         else:
             # --- Local fallback: write files only ---
@@ -462,11 +539,12 @@ def _persist_and_log(publications, raw_data, name: str, abbr: str, started,
             storage.save_by_series(publications, raw_data, abbr)
             print(f"Done: {abbr}: {len(publications)} fetched, saved to local files")
     else:
-        print(f"  No publications found for {abbr}")
+        print(f"  No new titles for {abbr}"
+              + (f" ({fetched_total} fetched, all older and never tracked)" if fetched_total else ""))
         # An empty result is still a completed run — log it (0 fetched, 0 new)
         # so 'ran and found nothing' is distinguishable from 'never ran'.
         if _db_configured():
-            _log_pipeline_run(name, 0, 0, 'success' if fetch_ok else 'partial',
+            _log_pipeline_run(name, fetched_total, 0, 'success' if fetch_ok else 'partial',
                               error=None if fetch_ok else 'incomplete fetch - watermark not advanced',
                               started_at=started, run_type=run_type)
             # Nothing new, but we still successfully checked up to now — advance
@@ -571,7 +649,8 @@ def scrape_single_series(series_config: dict, scraper: CrossRefScraper,
         raise
 
     _persist_and_log(publications, raw_data, name, abbr, started, run_type, storage,
-                     fetch_ok=getattr(scraper, 'fetch_ok', True) is not False)
+                     fetch_ok=getattr(scraper, 'fetch_ok', True) is not False,
+                     new_since=from_created_date)
 
     return publications
 
@@ -625,7 +704,7 @@ def scrape_publisher(pub_config: dict, scraper: CrossRefScraper,
         raise
 
     _persist_and_log(publications, raw_data, name, abbr, started, run_type, storage,
-                     fetch_ok=collector.fetch_ok)
+                     fetch_ok=collector.fetch_ok, new_since=from_created_date)
     return publications
 
 

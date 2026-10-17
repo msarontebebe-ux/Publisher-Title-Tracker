@@ -15,6 +15,10 @@ Built as part of a thesis. Individual journal articles are not tracked.
    a few aggregates are recomputed (gold).
 3. Each record is fingerprinted. A new DOI gives a `title.added` event, a known
    DOI with changed data gives `title.updated`, unchanged data gives nothing.
+   A title that was stored before the event log existed gets a quiet
+   `title.baseline` the first time it is seen again, so a later change to it is a
+   real update and the old title is not announced as new. Baselines are hidden
+   from the API and feeds unless you ask for `type=title.baseline`.
 
 Each stream has a watermark (`pipeline_state.last_success_at`) that only moves
 forward after a complete run, so a failed run is just retried. The `events` table
@@ -30,6 +34,7 @@ twice cannot create duplicates.
   into volumes/issues), books from CrossRef. Falls back to CrossRef without a key.
 
 Publishers and types are set in `config.json`.
+
 
 ## Setup
 
@@ -93,6 +98,10 @@ never touch the database from `.env`.
 - "New" means newly registered in CrossRef, which can be later than the
   publisher's announcement. Metadata is uneven (Elsevier has almost no journal
   issues there).
+- Incremental runs ask CrossRef for records deposited or updated since the last run
+  (`from-update-date`) and use each record's `created` date to skip old titles that
+  were never tracked here. Real metadata changes in the fingerprinted fields turned
+  out to be rare in the samples I checked, so `title.updated` events are rare too.
 - Events written before the `source` column was labelled are all `crossref`,
   including some that came from the IEEE API.
 - Old Springer rows have no `work_type` until you run `python backfill_work_type.py`.

@@ -19,6 +19,7 @@ WILEY = {
 
 ISSUE_ITEM = {
     'DOI': '10.1002/advs.v13.56', 'type': 'journal-issue', 'publisher': 'Wiley',
+    'created': {'date-time': '2026-10-05T08:30:00Z'},
     'container-title': ['Advanced Science'], 'volume': '13', 'issue': '56',
     'published-print': {'date-parts': [[2026, 10]]},
 }
@@ -81,7 +82,7 @@ class TestFetch:
         CrossRefPublisherCollector(WILEY, scraper).fetch(from_created_date='2026-10-01')
         params = scraper.session.get.call_args_list[0].kwargs['params']
         assert params['filter'] == ('prefix:10.1002,type:journal-issue,type:monograph,'
-                                    'from-created-date:2026-10-01')
+                                    'from-update-date:2026-10-01')
 
     def test_journal_issue_gets_readable_title_and_work_type(self):
         scraper = _scraper_with([ISSUE_ITEM, BOOK_ITEM])
@@ -125,3 +126,22 @@ class TestFetchOk:
         scraper.session = _scraper_with([ISSUE_ITEM]).session
         CrossRefPublisherCollector(WILEY, scraper).fetch()
         assert scraper.fetch_ok is True
+
+
+class TestCreatedDate:
+
+    def test_created_date_is_captured_from_crossref(self):
+        scraper = _scraper_with([ISSUE_ITEM])
+        pubs, _ = CrossRefPublisherCollector(WILEY, scraper).fetch()
+        assert pubs[0].created == '2026-10-05T08:30:00Z'
+
+    def test_created_is_requested_from_crossref(self):
+        scraper = _scraper_with([ISSUE_ITEM])
+        CrossRefPublisherCollector(WILEY, scraper).fetch()
+        select = scraper.session.get.call_args_list[0].kwargs['params']['select']
+        assert 'created' in select.split(',')
+
+    def test_missing_created_is_none(self):
+        scraper = _scraper_with([BOOK_ITEM])
+        pubs, _ = CrossRefPublisherCollector(WILEY, scraper).fetch()
+        assert pubs[0].created is None

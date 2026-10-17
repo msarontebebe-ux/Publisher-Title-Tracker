@@ -204,6 +204,7 @@ class DataLakeStorageHandler:
                 row.pop('venue', None)
                 row.pop('ee', None)  # Using 'url' instead
                 row.pop('source', None)  # internal label for the event log, not a CSV column
+                row.pop('created', None)  # CrossRef registration date, used only to filter increments
                 
                 writer.writerow(row)
         

@@ -20,7 +20,7 @@ In-memory transport objects (used by the scraper before DB write):
 
 from dataclasses import dataclass, field, asdict as _dc_asdict
 from typing import List, Optional as Opt
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 # ---------------------------------------------------------------------------
@@ -55,6 +55,7 @@ class ScrapedPublication:
     source: str = "crossref"     # where the record came from (crossref / ieee-xplore); stored on its events
     dblp_key: Opt[str] = None
     dblp_url: Opt[str] = None
+    created: Opt[str] = None     # when CrossRef first registered the DOI (ISO date-time); not part of the fingerprint
     event_date_start: Opt[str] = None
     event_date_end: Opt[str] = None
     event_year: Opt[int] = None
@@ -62,7 +63,11 @@ class ScrapedPublication:
     event_date_confidence: Opt[str] = None
     event_name: Opt[str] = None
     event_location: Opt[str] = None
-    fetched_at: str = field(default_factory=lambda: datetime.now().isoformat())
+    # Naive UTC, like every other timestamp in the system (runner._utcnow, the DB
+    # defaults, events.detected_at). datetime.now() is LOCAL time: on a machine at
+    # UTC+2 it made publications.fetched_at and events.observed_at two hours late.
+    fetched_at: str = field(
+        default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None).isoformat())
 
     def to_dict(self):
         data = _dc_asdict(self)
@@ -319,7 +324,7 @@ class TitleEvent(Base):
 #
 # One row per series storing last_success_at: the moment of the last SUCCESSFUL
 # incremental run. The next incremental run asks the source for only what
-# changed after this timestamp (CrossRef from-created-date), instead of
+# changed after this timestamp (CrossRef from-update-date), instead of
 # re-scanning the whole current year. The watermark advances ONLY after a
 # successful run, so a failed run re-tries the same window and never loses data.
 

@@ -7,6 +7,7 @@ from typing import List, Optional, Dict, Any, Tuple
 from urllib.parse import urlencode
 from pipeline.models import ScrapedPublication as Publication, ScrapedAuthor as Author
 from pipeline.event_dates import ConferenceDateExtractor
+from pipeline.events import decode_entities
 
 
 class CrossRefScraper:
@@ -47,11 +48,14 @@ class CrossRefScraper:
             year_start: Optional start year filter
             year_end: Optional end year filter
             max_results: Maximum number of results to fetch
-            from_created_date: Optional CrossRef from-created-date (YYYY-MM-DD).
-                Used by incremental runs to fetch only records created/changed
-                in CrossRef since the last watermark — the true delta, instead
-                of re-scanning a whole year. When set, it replaces the year
-                filters (they serve different purposes and must not combine).
+            from_created_date: Watermark date (YYYY-MM-DD). Despite the name it is
+                sent to CrossRef as `from-update-date` ("deposited or redeposited
+                at or after"), so incremental runs see records that were created
+                OR changed since the last run. `from-created-date` would only
+                return brand-new DOIs and never an update to an older title.
+                The caller separates new titles from old ones using each
+                record's `created` date. When set, it replaces the year filters
+                (they serve different purposes and must not combine).
             
         Returns:
             Tuple of (List of Publication objects, List of raw API responses)
@@ -69,14 +73,14 @@ class CrossRefScraper:
                 'filter': base_filter,
                 'rows': rows,
                 'cursor': cursor,  # Use cursor instead of offset for deep pagination
-                'select': 'DOI,title,subtitle,author,editor,published-print,published-online,container-title,volume,issue,page,ISBN,ISSN,publisher,type,event'
+                'select': 'DOI,title,subtitle,author,editor,published-print,published-online,container-title,volume,issue,page,ISBN,ISSN,publisher,type,event,created'
             }
             
             # Date filtering. A watermark (from_created_date) selects the true
             # delta since the last run and takes precedence over year filters.
             if from_created_date:
-                params['filter'] += f',from-created-date:{from_created_date}'
-                print(f"  Incremental: records created/changed since {from_created_date}")
+                params['filter'] += f',from-update-date:{from_created_date}'
+                print(f"  Incremental: records deposited/updated since {from_created_date}")
             elif year_start and year_end:
                 params['filter'] += f',from-pub-date:{year_start},until-pub-date:{year_end}'
             elif year_start:
@@ -292,6 +296,8 @@ class CrossRefScraper:
                     title = container + (f" Vol. {vol}" if vol else '') + (f" No. {iss}" if iss else '')
                 else:
                     title = 'Unknown Title'
+            # CrossRef sometimes returns titles HTML-encoded ('A &amp; B'); store plain text.
+            title = decode_entities(title)
             
             # Extract authors/editors (books have editors, book-chapters have authors)
             authors_data = item.get('author', []) or item.get('editor', [])
@@ -299,9 +305,9 @@ class CrossRefScraper:
             for author_data in authors_data:
                 given = author_data.get('given', '')
                 family = author_data.get('family', '')
-                name = f"{given} {family}".strip()
+                name = decode_entities(f"{given} {family}".strip())
                 if not name:
-                    name = author_data.get('name', 'Unknown')
+                    name = decode_entities(author_data.get('name', 'Unknown'))
                 authors.append(Author(name=name))
             
             # Note: For proceedings volumes (type:book), these are typically editors, not authors
@@ -335,7 +341,7 @@ class CrossRefScraper:
             
             # Extract event dates — try sources in priority order
             subtitle_list = item.get('subtitle', [])
-            subtitle = subtitle_list[0] if subtitle_list else None
+            subtitle = decode_entities(subtitle_list[0]) if subtitle_list else None
 
             event_info = ConferenceDateExtractor.extract_from_crossref(item)
             if not event_info or event_info.get('confidence') == 'low':
@@ -363,13 +369,14 @@ class CrossRefScraper:
                 isbn=isbn,
                 publisher=publisher,
                 work_type=item.get('type'),
+                created=(item.get('created') or {}).get('date-time'),
                 event_date_start=event_info.get('event_date_start') if event_info else None,
                 event_date_end=event_info.get('event_date_end') if event_info else None,
                 event_year=event_info.get('event_year') if event_info else None,
                 event_month=event_info.get('event_month') if event_info else None,
                 event_date_confidence=event_info.get('confidence') if event_info else None,
-                event_name=event_info.get('event_name') if event_info else None,
-                event_location=event_info.get('event_location') if event_info else None,
+                event_name=decode_entities(event_info.get('event_name')) if event_info else None,
+                event_location=decode_entities(event_info.get('event_location')) if event_info else None,
             )
             
             return publication

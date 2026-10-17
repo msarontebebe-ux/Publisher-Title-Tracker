@@ -198,10 +198,44 @@ def compute_quality_metrics(session, series_filter: str = None):
             ))
 
 
+# Gold tables are derived from `publications`, but every compute_* function above
+# only adds or updates rows. A series that stops existing in `publications`
+# (renamed, merged into another, or no longer collected) would keep its old gold
+# rows forever and the API would keep listing a series with no titles. Each rule
+# says when a row has lost all the data it was computed from.
+_NO_SERIES = 'NOT EXISTS (SELECT 1 FROM publications p WHERE p.series = t.series)'
+_ORPHAN_RULES = (
+    ('gold.series_stats', _NO_SERIES),
+    ('gold.top_authors', _NO_SERIES),
+    ('quality_metrics', _NO_SERIES),
+    # per (series, year): also drops a year that no longer has any title
+    ('gold.yearly_trends', 'NOT EXISTS (SELECT 1 FROM publications p '
+                           'WHERE p.series = t.series AND p.year = t.year)'),
+)
+
+
+def prune_orphans(session) -> int:
+    """
+    Delete gold/quality rows that no publication backs any more; returns how many.
+
+    Safe to run on every refresh (the scheduled jobs refresh one series at a time,
+    so this cannot wait for a full rebuild): a row is only removed when nothing in
+    `publications` could have produced it. Rows with a NULL series are left alone.
+    The table names are constants above, never user input.
+    """
+    removed = 0
+    for table, rule in _ORPHAN_RULES:
+        result = session.execute(text(
+            f'DELETE FROM {table} AS t WHERE t.series IS NOT NULL AND {rule}'))
+        removed += result.rowcount or 0
+    return removed
+
+
 def refresh_gold(series_filter: str = None):
     """
     Recompute all gold tables + quality metrics.
-    Call this after every silver upsert.
+    Call this after every silver upsert. Also removes rows left behind by series
+    that no longer have any publications (see prune_orphans), whatever the filter.
 
     Args:
         series_filter: if given, only recomputes that series (e.g. 'Lecture Notes in Computer Science')
@@ -215,7 +249,10 @@ def refresh_gold(series_filter: str = None):
         compute_yearly_trends(session,    series_filter)
         compute_top_authors(session,      series_filter)
         compute_quality_metrics(session,  series_filter)
+        pruned = prune_orphans(session)
         session.commit()
+        if pruned:
+            print(f"  Gold: removed {pruned} stale row(s) with no publications behind them")
         print(f"  Gold: done")
     except Exception:
         session.rollback()

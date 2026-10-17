@@ -173,3 +173,32 @@ def test_doi_redirect_falls_back_to_scholar_only_when_doi_org_fails(client, monk
     _fake_first_hop(monkeypatch, None)
     r = client.get('/api/doi/10.1/a')
     assert r.headers['Location'].startswith('https://scholar.google.com/scholar?q=')
+
+
+class TestBaselineHiddenFromApi:
+
+    @pytest.fixture()
+    def with_baseline(self, client):
+        from pipeline.db import DatabaseConfig
+        from pipeline.models import TitleEvent
+        session = DatabaseConfig.get_session()
+        session.add(TitleEvent(event_id='e-base', event_type='title.baseline',
+                               source='crossref', source_record_id='10.1109/d',
+                               series='IEEE', publisher='IEEE', payload_hash='h-base',
+                               payload={'title': 'Quiet baseline'},
+                               detected_at=datetime.utcnow()))
+        session.commit()
+        session.close()
+        return client
+
+    def test_events_hide_baselines_by_default(self, with_baseline):
+        r = with_baseline.get('/api/events?since=2020-01-01&publisher=IEEE').get_json()
+        assert 'title.baseline' not in {e['event_type'] for e in r['results']}
+
+    def test_baselines_can_be_requested_explicitly(self, with_baseline):
+        r = with_baseline.get('/api/events?since=2020-01-01&type=title.baseline').get_json()
+        assert [e['event_type'] for e in r['results']] == ['title.baseline']
+
+    def test_atom_feed_hides_baselines(self, with_baseline):
+        body = with_baseline.get('/feed/events.atom?publisher=IEEE').get_data(as_text=True)
+        assert 'Quiet baseline' not in body and '2026 IEEE Conf' in body

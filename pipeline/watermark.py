@@ -17,9 +17,9 @@ Semantics that keep this safe:
   * The watermark is advanced ONLY on success, so a failed run re-tries the
     same window and never silently skips data.
 
-CrossRef maps the watermark to its `from-created-date` filter, which selects
-records *created/updated in CrossRef* after the watermark — i.e. things that
-are new or changed since our last look.
+CrossRef maps the watermark to its `from-update-date` filter ("deposited or
+redeposited at or after"), so a run sees titles that are new OR changed since our
+last look. `from-created-date` would only ever return brand-new DOIs.
 """
 
 from datetime import datetime
@@ -77,7 +77,7 @@ def advance_watermark(series: str, when: Optional[datetime] = None) -> Optional[
 
 def watermark_to_created_date(watermark: Optional[datetime]) -> Optional[str]:
     """
-    Format a watermark as a CrossRef `from-created-date` value (YYYY-MM-DD).
+    Format a watermark as the date value for CrossRef's `from-update-date` (YYYY-MM-DD).
     Returns None when there is no watermark (caller uses its default window).
     """
     if watermark is None:

@@ -17,6 +17,7 @@ from email.utils import format_datetime as fmt_rfc2822
 from pipeline.config import (
     load_series_map, resolve_series_name, load_publisher_streams, resolve_publisher,
 )
+from pipeline.events import decode_entities
 
 from flask import Flask, jsonify, request, send_from_directory, redirect
 from flask_cors import CORS
@@ -830,7 +831,9 @@ def get_events():
 
     Params:
       since   — ISO datetime/date. Defaults to 7 days ago.
-      type    — optional filter: 'title.added' or 'title.updated'
+      type    — optional filter: 'title.added' or 'title.updated'. Without it,
+                'title.baseline' (silent starting point of an already stored title)
+                is left out; ask for it explicitly with type=title.baseline.
       series  — optional series filter (abbreviation or full name)
       publisher — optional publisher filter (SPRINGER, ELSEVIER, WILEY, IEEE, ACM)
       work_type — optional work type (proceedings, journal-issue, book, ...)
@@ -873,6 +876,9 @@ def get_events():
                  .filter(TitleEvent.detected_at >= since))
             if ev_type:
                 q = q.filter(TitleEvent.event_type == ev_type)
+            else:
+                # Quiet baselines (titles stored before the event log) are not news.
+                q = q.filter(TitleEvent.event_type != 'title.baseline')
             if series:
                 full_name = _resolve_series(series)
                 q = q.filter(TitleEvent.series.ilike(f'%{full_name}%'))
@@ -887,6 +893,10 @@ def get_events():
             for ev, wt in rows:
                 d = ev.to_dict()
                 d['work_type'] = wt
+                # The log is append-only, so older events keep an HTML-encoded title
+                # in their payload; show plain text.
+                if isinstance(d.get('payload'), dict) and d['payload'].get('title'):
+                    d['payload'] = dict(d['payload'], title=decode_entities(d['payload']['title']))
                 results.append(d)
 
             # Mark as delivered (best-effort; never fails the request).
@@ -935,7 +945,7 @@ def events_atom_feed():
         from pipeline.models import TitleEvent
         session = _get_session()
         try:
-            q = session.query(TitleEvent)
+            q = session.query(TitleEvent).filter(TitleEvent.event_type != 'title.baseline')
             if series:
                 full_name = _resolve_series(series)
                 q = q.filter(TitleEvent.series.ilike(f'%{full_name}%'))
@@ -948,7 +958,7 @@ def events_atom_feed():
             for ev in events:
                 doi = ev.source_record_id or ''
                 payload = ev.payload or {}
-                title_text = payload.get('title') or doi or 'Untitled'
+                title_text = decode_entities(payload.get('title')) or doi or 'Untitled'
                 entry_title = xml_escape(f"[{ev.event_type}] {title_text}")
                 link = xml_escape(f'https://doi.org/{doi}' if doi else request.host_url)
                 updated = fmt_rfc2822(

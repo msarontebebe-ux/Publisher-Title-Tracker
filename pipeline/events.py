@@ -24,7 +24,9 @@ Design notes
 """
 
 import hashlib
+import html
 import json
+import re
 import uuid
 from datetime import date, datetime
 from typing import Any, Dict, Optional
@@ -40,6 +42,29 @@ CANONICAL_FIELDS = (
 # Event type constants
 TITLE_ADDED = 'title.added'
 TITLE_UPDATED = 'title.updated'
+# A title that was already stored before the event log existed (or before its
+# first event), seen again for the first time. It records the starting
+# fingerprint quietly, so a LATER change is a real title.updated instead of the
+# old title being announced as new. Hidden from the API/feeds by default.
+TITLE_BASELINE = 'title.baseline'
+
+
+_ENTITY = re.compile(r'&#?[A-Za-z0-9]+;')
+
+
+def decode_entities(value: Any) -> Any:
+    """
+    Turn HTML entities into plain characters ('&amp;' -> '&').
+
+    CrossRef hands out some titles HTML-encoded ('Clinical Pharmacology &amp;
+    Therapeutics'). Only complete entities (with the closing ';') are decoded, so
+    ordinary text such as 'R&D' or 'AT&T' is left alone. Non-strings (None) are
+    returned unchanged. The scraper uses this when parsing a record and the
+    fingerprint uses it too, so encoded and decoded text never look like a change.
+    """
+    if not isinstance(value, str) or '&' not in value:
+        return value
+    return _ENTITY.sub(lambda m: html.unescape(m.group(0)), value)
 
 
 def _normalise(value: Any) -> Any:
@@ -49,7 +74,7 @@ def _normalise(value: Any) -> Any:
     if isinstance(value, (date, datetime)):
         return value.isoformat()
     if isinstance(value, str):
-        return value.strip()
+        return decode_entities(value.strip())
     return value
 
 
@@ -71,7 +96,7 @@ def canonical_record(pub: Dict[str, Any]) -> Dict[str, Any]:
         else:
             name = a
         if name:
-            names.append(str(name).strip())
+            names.append(decode_entities(str(name).strip()))
     record['authors'] = sorted(n for n in names if n)
 
     return record
@@ -86,12 +111,32 @@ def payload_hash(pub: Dict[str, Any]) -> str:
     return hashlib.sha256(blob.encode('utf-8')).hexdigest()
 
 
+def fingerprint_of_stored(payload: Any, stored_hash: Optional[str]) -> Optional[str]:
+    """
+    Re-compute a stored event's fingerprint under the CURRENT normalisation rules.
+
+    Events are never edited, so an old event keeps the hash it was written with
+    (computed on the then-encoded title). Comparing a fresh record against that
+    old hash would report a change that is only an encoding difference. The
+    stored payload is the full canonical record, so hashing it again gives the
+    fingerprint the same record would get today. Falls back to the stored hash
+    when there is no usable payload.
+    """
+    if isinstance(payload, dict) and payload:
+        try:
+            return payload_hash(payload)
+        except Exception:
+            pass
+    return stored_hash
+
+
 def new_event_id() -> str:
     """A unique, sortable-ish identifier for an event row."""
     return uuid.uuid4().hex
 
 
-def classify_event_type(pub: Dict[str, Any], existing_hash: Optional[str]) -> Optional[str]:
+def classify_event_type(pub: Dict[str, Any], existing_hash: Optional[str],
+                        baseline: bool = False) -> Optional[str]:
     """
     Decide what event (if any) a scraped record represents.
 
@@ -99,15 +144,19 @@ def classify_event_type(pub: Dict[str, Any], existing_hash: Optional[str]) -> Op
         pub:           the scraped publication dict.
         existing_hash: the payload_hash last stored for this DOI, or None if
                        the DOI has never been seen.
+        baseline:      True when the title is already stored (it predates the
+                       event log) but has no event yet.
 
     Returns:
         TITLE_ADDED   if the DOI is new,
+        TITLE_BASELINE if the DOI has no event yet but the title was already
+                       stored (baseline=True) - recorded quietly, not announced,
         TITLE_UPDATED if the DOI is known but its fingerprint changed,
         None          if nothing changed (no event should be written).
     """
     current = payload_hash(pub)
     if existing_hash is None:
-        return TITLE_ADDED
+        return TITLE_BASELINE if baseline else TITLE_ADDED
     if existing_hash != current:
         return TITLE_UPDATED
     return None
