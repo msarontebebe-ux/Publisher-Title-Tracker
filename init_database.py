@@ -43,8 +43,12 @@ def init_database():
                 ADD COLUMN IF NOT EXISTS work_type      VARCHAR(30)
         """))
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_publications_work_type ON publications (work_type)"))
+        # CrossRef registration time of each title (used to measure detection latency)
+        conn.execute(text("ALTER TABLE publications ADD COLUMN IF NOT EXISTS registered_at TIMESTAMP"))
+        conn.execute(text("ALTER TABLE events ADD COLUMN IF NOT EXISTS registered_at TIMESTAMP"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_publications_registered_at ON publications (registered_at)"))
         conn.commit()
-    print("   Schema up to date (event_name, event_location, work_type columns ensured)")
+    print("   Schema up to date (event_name, event_location, work_type, registered_at ensured)")
 
     tables = {
         'bronze': ['raw_responses'],

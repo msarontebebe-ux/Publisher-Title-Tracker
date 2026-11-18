@@ -160,6 +160,7 @@ class Publication(Base):
     event_location        = Column(String(255))  # e.g. "Milan, Italy"
 
     fetched_at = Column(DateTime, default=datetime.utcnow, index=True)
+    registered_at = Column(DateTime, index=True)   # when CrossRef first registered the DOI (NULL if unknown); not fingerprinted
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     authors = relationship('Author', secondary=publication_authors, back_populates='publications')
@@ -186,6 +187,7 @@ class Publication(Base):
             'event_location':        self.event_location,
             'authors':               [{'name': a.name} for a in self.authors],
             'fetched_at':            self.fetched_at.isoformat() if self.fetched_at else None,
+            'registered_at':         self.registered_at.isoformat() if self.registered_at else None,
         }
 
 
@@ -295,6 +297,7 @@ class TitleEvent(Base):
     payload         = Column(JSON)                                  # the canonical record snapshot
     published_at    = Column(Date)                                  # publication/event date, if known
     observed_at     = Column(DateTime)                              # when the source produced the data
+    registered_at   = Column(DateTime)                              # when CrossRef first registered the DOI (latency = detected_at - registered_at)
     detected_at     = Column(DateTime, default=datetime.utcnow, index=True)  # when WE noticed it
     delivered_at    = Column(DateTime, nullable=True)               # when served to a consumer (latency)
 
@@ -310,6 +313,7 @@ class TitleEvent(Base):
             'payload':         self.payload,
             'published_at':    self.published_at.isoformat()   if self.published_at else None,
             'observed_at':     self.observed_at.isoformat()    if self.observed_at  else None,
+            'registered_at':   self.registered_at.isoformat()  if self.registered_at else None,
             'detected_at':     self.detected_at.isoformat()    if self.detected_at  else None,
             'delivered_at':    self.delivered_at.isoformat()   if self.delivered_at else None,
         }

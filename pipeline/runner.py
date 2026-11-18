@@ -17,6 +17,25 @@ def _utcnow():
 
 
 
+def _registered_at(pub_data):
+    """
+    When CrossRef first registered the title, as naive UTC like every other timestamp
+    here, or None when the source does not say (IEEE and Springer API records) or the
+    value cannot be read. It is not part of the fingerprint, so storing it never
+    creates a title.updated event.
+    """
+    raw = pub_data.get('created')
+    if not raw:
+        return None
+    try:
+        when = datetime.fromisoformat(str(raw).replace('Z', '+00:00'))
+    except ValueError:
+        return None
+    if when.tzinfo is not None:
+        when = when.astimezone(timezone.utc).replace(tzinfo=None)
+    return when
+
+
 def _db_configured() -> bool:
     """Return True when cloud DB credentials are present."""
     from pipeline.db import DatabaseConfig
@@ -188,11 +207,11 @@ def _write_events(publications, series_name: str, stored_before=None) -> "EventR
                 INSERT INTO events
                     (event_id, event_type, source, source_record_id, series,
                      publisher, payload_hash, payload, published_at,
-                     observed_at, detected_at)
+                     observed_at, registered_at, detected_at)
                 VALUES
                     (:event_id, :event_type, :source, :doi, :series,
                      :publisher, :payload_hash, CAST(:payload AS json), :published_at,
-                     :observed_at, :detected_at)
+                     :observed_at, :registered_at, :detected_at)
                 ON CONFLICT (source, source_record_id, payload_hash) DO NOTHING
             """), {
                 'event_id':     new_event_id(),
@@ -205,6 +224,7 @@ def _write_events(publications, series_name: str, stored_before=None) -> "EventR
                 'payload':      json.dumps(canonical_record(pub_data)),
                 'published_at': published_at,
                 'observed_at':  observed_at,
+                'registered_at': _registered_at(pub_data),
                 'detected_at':  _utcnow(),
             })
 
@@ -315,6 +335,7 @@ def _write_silver(publications, series_name: str) -> "SilverResult":
                         datetime.fromisoformat(pub_data['fetched_at'])
                         if pub_data.get('fetched_at') else _utcnow()
                     ),
+                    registered_at=_registered_at(pub_data),
                 )
                 session.add(pub)
 
@@ -596,6 +617,8 @@ def _update_silver(publications) -> int:
             for field in _SILVER_FIELDS:
                 setattr(row, field, data.get(field))
             row.url = data.get('ee') or data.get('url')
+            if _registered_at(data):
+                row.registered_at = _registered_at(data)
             for field in ('event_date_start', 'event_date_end'):
                 setattr(row, field, date.fromisoformat(data[field]) if data.get(field) else None)
             names = list(dict.fromkeys(
@@ -620,6 +643,36 @@ def _update_silver(publications) -> int:
     if count:
         print(f"   Silver: updated {count} changed title(s)")
     return count
+
+
+def _fill_registered_at(publications) -> int:
+    """
+    Record the CrossRef registration time on stored titles that do not have one yet
+    (for example a volume the Springer API reported first, which CrossRef registered
+    later). Existing values are never overwritten. Returns how many rows were filled.
+    """
+    from pipeline.db import DatabaseConfig
+    from sqlalchemy import text as sa_text
+
+    rows = [{'doi': p.doi, 'at': _registered_at(p.to_dict())} for p in publications if p.doi]
+    rows = [r for r in rows if r['at'] is not None]
+    if not rows:
+        return 0
+    session = DatabaseConfig.get_session()
+    filled = 0
+    try:
+        for row in rows:
+            filled += session.execute(sa_text(
+                'UPDATE publications SET registered_at = :at '
+                'WHERE doi = :doi AND registered_at IS NULL'), row).rowcount
+        session.commit()
+    except Exception as exc:
+        session.rollback()
+        print(f"   Registration time update failed: {exc}")
+        return 0
+    finally:
+        session.close()
+    return filled
 
 
 def _persist_and_log(publications, raw_data, name: str, abbr: str, started,
@@ -672,6 +725,7 @@ def _persist_and_log(publications, raw_data, name: str, abbr: str, started,
             if events.updated_dois:
                 changed = set(events.updated_dois)
                 _update_silver([p for p in publications if p.doi in changed])
+            _fill_registered_at(publications)
             _refresh_gold(name)
 
             # Truthful status: a batch that failed to commit means the run was
