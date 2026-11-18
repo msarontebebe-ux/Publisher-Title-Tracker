@@ -72,7 +72,7 @@ def db_env(test_db, monkeypatch):
     from sqlalchemy import create_engine, text
     engine = create_engine(test_db)
     with engine.connect() as conn:
-        conn.execute(text('TRUNCATE publication_authors, publications, authors, pipeline_runs, quality_metrics, events, pipeline_state, api_usage, gold.series_stats, gold.yearly_trends, gold.top_authors, gold.publisher_map, gold.dim_publisher RESTART IDENTITY CASCADE'))
+        conn.execute(text('TRUNCATE publication_authors, publications, authors, pipeline_runs, quality_metrics, events, pipeline_state, api_usage, gold.series_stats, gold.yearly_trends, gold.top_authors, gold.publisher_map, gold.dim_publisher, gold.fact_title_event, gold.fact_pipeline_run, gold.dim_date, gold.dim_series, gold.dim_work_type, gold.dim_source, gold.dim_event_type, gold.location_map, gold.dim_location, gold.dim_load_type RESTART IDENTITY CASCADE'))
         conn.commit()
     engine.dispose()
 

@@ -111,4 +111,5 @@ class TestDimension:
         from pipeline.gold import refresh_gold
         self.seed()
         refresh_gold(series_filter=LNCS)
-        assert rows(db_env, 'SELECT COUNT(*) FROM gold.dim_publisher') == [(6,)]
+        # the star schema refresh adds the 'Unknown' member (key -1) on top of the 6 real imprints
+        assert rows(db_env, 'SELECT COUNT(*) FROM gold.dim_publisher WHERE publisher_key > 0') == [(6,)]

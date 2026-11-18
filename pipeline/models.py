@@ -78,7 +78,7 @@ class ScrapedPublication:
         return f"{self.title} - {names} ({self.year})"
 from sqlalchemy import (
     Column, Integer, String, Text, Date, DateTime,
-    ForeignKey, Table, Numeric, JSON, event, UniqueConstraint,
+    ForeignKey, Table, Numeric, JSON, Boolean, SmallInteger, event, UniqueConstraint,
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
@@ -447,3 +447,131 @@ class GoldPublisherMap(Base):
     series        = Column(String(255), primary_key=True)      # publications.series / events.series
     raw_publisher = Column(String(255), primary_key=True)      # publications.publisher / events.publisher
     publisher_key = Column(Integer, ForeignKey('gold.dim_publisher.publisher_key'), nullable=False)
+
+
+# ---------------------------------------------------------------------------
+# GOLD - star schema (multidimensional model)
+# ---------------------------------------------------------------------------
+# Key -1 is the "Unknown" member of a dimension. Dimensions keep stable keys (members are
+# only added); the fact tables are rebuilt after each gold refresh (pipeline/star.py).
+
+class GoldDimDate(Base):
+    __tablename__ = 'dim_date'
+    __table_args__ = {'schema': 'gold'}
+
+    date_key    = Column(Integer, primary_key=True, autoincrement=False)   # yyyymmdd, -1 = unknown
+    full_date   = Column(Date)
+    year        = Column(Integer)
+    quarter     = Column(Integer)
+    month       = Column(Integer)
+    month_name  = Column(String(20))
+    iso_week    = Column(Integer)
+    day_of_week = Column(Integer)                                           # 1 = Monday
+    is_weekend  = Column(Boolean)
+
+
+class GoldDimSeries(Base):
+    __tablename__ = 'dim_series'
+    __table_args__ = {'schema': 'gold'}
+
+    series_key   = Column(Integer, primary_key=True, autoincrement=True)
+    series       = Column(String(255), nullable=False, unique=True)
+    abbreviation = Column(String(50))
+    publisher    = Column(String(100))
+    stream_kind  = Column(String(30))          # Springer series / Publisher stream / Unknown
+
+
+class GoldDimWorkType(Base):
+    __tablename__ = 'dim_work_type'
+    __table_args__ = {'schema': 'gold'}
+
+    work_type_key = Column(Integer, primary_key=True, autoincrement=True)
+    crossref_type = Column(String(50), nullable=False, unique=True)
+    type_group    = Column(String(30))         # Proceedings / Book / Journal issue / Other
+
+
+class GoldDimSource(Base):
+    __tablename__ = 'dim_source'
+    __table_args__ = {'schema': 'gold'}
+
+    source_key = Column(Integer, primary_key=True, autoincrement=True)
+    source     = Column(String(50), nullable=False, unique=True)
+    kind       = Column(String(40))
+
+
+class GoldDimEventType(Base):
+    __tablename__ = 'dim_event_type'
+    __table_args__ = {'schema': 'gold'}
+
+    event_type_key = Column(Integer, primary_key=True, autoincrement=True)
+    event_type     = Column(String(30), nullable=False, unique=True)
+    counts_as_new  = Column(Boolean)
+
+
+class GoldDimLocation(Base):
+    __tablename__ = 'dim_location'
+    __table_args__ = (UniqueConstraint('city', 'country', name='uq_dim_location'),
+                      {'schema': 'gold'})
+
+    location_key = Column(Integer, primary_key=True, autoincrement=True)
+    city         = Column(String(255), nullable=False)
+    country      = Column(String(255), nullable=False)
+    raw_location = Column(String(255))                                      # first spelling seen
+
+
+class GoldLocationMap(Base):
+    """Which location_key a raw publications.event_location string belongs to."""
+    __tablename__ = 'location_map'
+    __table_args__ = {'schema': 'gold'}
+
+    raw_location = Column(String(255), primary_key=True)
+    location_key = Column(Integer, ForeignKey('gold.dim_location.location_key'), nullable=False)
+
+
+class GoldDimLoadType(Base):
+    __tablename__ = 'dim_load_type'
+    __table_args__ = {'schema': 'gold'}
+
+    load_type_key = Column(Integer, primary_key=True, autoincrement=False)
+    load_type     = Column(String(40), nullable=False, unique=True)
+
+
+class GoldFactTitleEvent(Base):
+    """Grain: one row per event in the log (title added / updated / baseline)."""
+    __tablename__ = 'fact_title_event'
+    __table_args__ = {'schema': 'gold'}
+
+    event_key           = Column(Integer, primary_key=True, autoincrement=True)
+    event_id            = Column(String(64), index=True)                    # degenerate dimension
+    doi                 = Column(String(255), index=True)                   # degenerate dimension
+    detected_date_key   = Column(Integer, ForeignKey('gold.dim_date.date_key'), nullable=False)
+    registered_date_key = Column(Integer, ForeignKey('gold.dim_date.date_key'), nullable=False)
+    conference_date_key = Column(Integer, ForeignKey('gold.dim_date.date_key'), nullable=False)
+    publisher_key       = Column(Integer, ForeignKey('gold.dim_publisher.publisher_key'), nullable=False)
+    series_key          = Column(Integer, ForeignKey('gold.dim_series.series_key'), nullable=False)
+    work_type_key       = Column(Integer, ForeignKey('gold.dim_work_type.work_type_key'), nullable=False)
+    source_key          = Column(Integer, ForeignKey('gold.dim_source.source_key'), nullable=False)
+    event_type_key      = Column(Integer, ForeignKey('gold.dim_event_type.event_type_key'), nullable=False)
+    location_key        = Column(Integer, ForeignKey('gold.dim_location.location_key'), nullable=False)
+    load_type_key       = Column(Integer, ForeignKey('gold.dim_load_type.load_type_key'), nullable=False)
+    event_count         = Column(Integer, nullable=False)                   # always 1
+    latency_hours       = Column(Numeric(10, 2))                            # NULL if registration unknown; < 0 = reported before CrossRef
+    has_conference_date = Column(SmallInteger, nullable=False)
+    has_editors         = Column(SmallInteger, nullable=False)
+
+
+class GoldFactPipelineRun(Base):
+    """Grain: one row per run of one stream (pipeline_runs)."""
+    __tablename__ = 'fact_pipeline_run'
+    __table_args__ = {'schema': 'gold'}
+
+    run_key          = Column(Integer, primary_key=True, autoincrement=True)
+    run_date_key     = Column(Integer, ForeignKey('gold.dim_date.date_key'), nullable=False)
+    series_key       = Column(Integer, ForeignKey('gold.dim_series.series_key'), nullable=False)
+    run_type         = Column(String(50))                                   # degenerate: full / incremental / manual
+    runs             = Column(Integer, nullable=False)                      # always 1
+    records_fetched  = Column(Integer)
+    records_new      = Column(Integer)
+    duration_seconds = Column(Integer)
+    is_success       = Column(SmallInteger, nullable=False)
+    is_partial       = Column(SmallInteger, nullable=False)

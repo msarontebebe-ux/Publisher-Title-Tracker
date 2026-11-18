@@ -7,6 +7,7 @@ Computes the aggregation tables in the gold schema:
   gold.top_authors     — most published authors per series
   gold.dim_publisher   — publisher dimension (publisher > imprint)
   gold.publisher_map   — (stream, raw publisher name) -> publisher_key
+  gold.dim_* / fact_*  — the star schema (pipeline/star.py)
 """
 
 from datetime import datetime
@@ -282,6 +283,8 @@ def refresh_gold(series_filter: str = None):
         compute_top_authors(session,      series_filter)
         compute_quality_metrics(session,  series_filter)
         compute_dim_publisher(session)
+        from pipeline.star import refresh_star
+        refresh_star(session)
         pruned = prune_orphans(session)
         session.commit()
         if pruned:
