@@ -1,258 +1,562 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Publisher Title Tracker</title>
+<meta name="description" content="New proceedings volumes, journal issues and books from Springer, Elsevier, Wiley, IEEE and ACM, found every night.">
 <style>
-  body { font-family: Arial, Helvetica, sans-serif; font-size: 15px; color: #222;
-         max-width: 1000px; margin: 0 auto; padding: 16px; line-height: 1.4; }
-  h1 { font-size: 24px; margin: 0 0 4px 0; }
-  h2 { font-size: 18px; margin: 28px 0 8px 0; border-bottom: 1px solid #ccc; padding-bottom: 4px; }
-  p.sub { margin: 0 0 12px 0; color: #555; }
-  nav { margin: 12px 0; padding: 6px 0; border-top: 1px solid #ccc; border-bottom: 1px solid #ccc; }
-  nav a { margin-right: 16px; }
-  a { color: #0645ad; }
-  table { border-collapse: collapse; width: 100%; margin: 8px 0; }
-  th, td { border: 1px solid #ccc; padding: 5px 8px; text-align: left; vertical-align: top; }
-  th { background: #f1f1f1; }
-  td.num { text-align: right; }
-  form { margin: 8px 0; }
-  label { margin-right: 12px; white-space: nowrap; }
-  select, input { font-size: 14px; padding: 2px 4px; }
-  button { font-size: 14px; padding: 3px 10px; }
-  .note { color: #555; font-size: 13px; }
-  .error { color: #b00020; }
-  .small { font-size: 13px; color: #555; }
-  footer { margin-top: 32px; padding-top: 8px; border-top: 1px solid #ccc; }
+  /* ---- design tokens (light); dark values below, selected by the OS or by the toggle ---- */
+  :root {
+    color-scheme: light;
+    --page: #f9f9f7;  --surface: #fcfcfb;  --ink: #0b0b0b;  --ink-2: #52514e;  --muted: #898781;
+    --grid: #e1e0d9;  --axis: #c3c2b7;  --border: rgba(11,11,11,.10);
+    --accent: #2a78d6;  --accent-ink: #184f95;  --accent-wash: #e8f1fc;  --good: #006300;
+    --c1: #2a78d6;  --c2: #eb6834;  --c3: #1baf7a;  --c4: #eda100;  --c5: #e87ba4;  --c-other: #898781;
+    --shadow: 0 1px 2px rgba(11,11,11,.06), 0 4px 16px rgba(11,11,11,.04);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --page: #0d0d0d;  --surface: #1a1a19;  --ink: #f0efec;  --ink-2: #c3c2b7;  --muted: #898781;
+      --grid: #2c2c2a;  --axis: #383835;  --border: rgba(255,255,255,.10);
+      --accent: #3987e5;  --accent-ink: #9ec5f4;  --accent-wash: #16263a;  --good: #0ca30c;
+      --c1: #3987e5;  --c2: #d95926;  --c3: #199e70;  --c4: #c98500;  --c5: #d55181;
+      --shadow: 0 1px 2px rgba(0,0,0,.4);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page: #0d0d0d;  --surface: #1a1a19;  --ink: #f0efec;  --ink-2: #c3c2b7;  --muted: #898781;
+    --grid: #2c2c2a;  --axis: #383835;  --border: rgba(255,255,255,.10);
+    --accent: #3987e5;  --accent-ink: #9ec5f4;  --accent-wash: #16263a;  --good: #0ca30c;
+    --c1: #3987e5;  --c2: #d95926;  --c3: #199e70;  --c4: #c98500;  --c5: #d55181;
+    --shadow: 0 1px 2px rgba(0,0,0,.4);
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 72px; }
+  body { margin: 0; background: var(--page); color: var(--ink); line-height: 1.5; font-size: 15px;
+         font-family: system-ui, -apple-system, "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased; }
+  a { color: var(--accent-ink); text-underline-offset: 2px; }
+  a:hover { text-decoration-thickness: 2px; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+  button, select, input { font: inherit; color: inherit; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  /* ---- top bar ---- */
+  .topbar { position: sticky; top: 0; z-index: 20; background: var(--surface); border-bottom: 1px solid var(--border); }
+  .topbar .wrap { display: flex; align-items: center; gap: 24px; height: 56px; }
+  .brand { font-weight: 650; letter-spacing: -.01em; display: flex; align-items: center; gap: 10px; color: var(--ink); text-decoration: none; }
+  .brand-mark { width: 22px; height: 22px; border-radius: 6px; background: var(--accent); display: grid; place-items: center; }
+  .brand-mark i { display: block; width: 10px; height: 10px; border: 2px solid #fff; border-radius: 2px; }
+  .topbar nav { display: flex; gap: 4px; margin-left: auto; }
+  .topbar nav a { padding: 6px 10px; border-radius: 8px; color: var(--ink-2); text-decoration: none; font-size: 14px; }
+  .topbar nav a:hover { background: var(--accent-wash); color: var(--ink); }
+  .theme-btn { border: 1px solid var(--border); background: transparent; border-radius: 8px; padding: 5px 10px; cursor: pointer; font-size: 13px; color: var(--ink-2); }
+  .theme-btn:hover { background: var(--accent-wash); }
+
+  /* ---- intro and period filter ---- */
+  .intro { padding: 40px 0 8px; }
+  .intro h1 { margin: 0 0 8px; font-size: clamp(26px, 4vw, 36px); line-height: 1.15; letter-spacing: -.02em; font-weight: 700; }
+  .intro p { margin: 0; max-width: 62ch; color: var(--ink-2); font-size: 16px; }
+  .status { margin-top: 12px; font-size: 13px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 16px; }
+  .status b { color: var(--ink-2); font-weight: 600; }
+  .filters { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 24px 0 16px; }
+  .filters > span { font-size: 13px; color: var(--ink-2); font-weight: 600; }
+  .seg { display: inline-flex; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 3px; }
+  .seg button { border: 0; background: transparent; padding: 6px 14px; border-radius: 8px; cursor: pointer; color: var(--ink-2); font-size: 14px; }
+  .seg button:hover { background: var(--accent-wash); }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: #fff; font-weight: 600; }
+
+  /* ---- cards and KPI tiles ---- */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); padding: 20px; transition: opacity .15s; }
+  .is-loading { opacity: .55; }
+  .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .kpis .hero { grid-column: span 2; grid-row: span 2; display: flex; flex-direction: column; justify-content: center; }
+  .label { font-size: 13px; color: var(--ink-2); font-weight: 600; }
+  .value { font-size: 30px; font-weight: 650; letter-spacing: -.02em; line-height: 1.15; margin-top: 4px; }
+  .hero .value { font-size: 56px; letter-spacing: -.03em; line-height: 1.05; }
+  .note { font-size: 13px; color: var(--muted); margin-top: 6px; }
+  .delta { font-size: 13px; margin-top: 6px; color: var(--ink-2); }
+  .delta.up { color: var(--good); font-weight: 600; }
+
+  h2 { font-size: 20px; letter-spacing: -.01em; margin: 40px 0 4px; }
+  .sub { margin: 0 0 16px; color: var(--ink-2); font-size: 14px; max-width: 70ch; }
+
+  .charts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  .charts .wide { grid-column: span 2; }
+  .chart-head { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 8px; }
+  .chart-head h3 { margin: 0; font-size: 16px; }
+  .chart-head p { margin: 2px 0 0; font-size: 13px; color: var(--muted); }
+  .tbl-btn { margin-left: auto; flex: none; border: 1px solid var(--border); background: transparent; border-radius: 8px; padding: 4px 10px; cursor: pointer; font-size: 13px; color: var(--ink-2); }
+  .tbl-btn:hover { background: var(--accent-wash); }
+  .tbl-btn[aria-pressed="true"] { background: var(--accent-wash); color: var(--accent-ink); border-color: var(--accent); }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 4px 0 8px; font-size: 13px; color: var(--ink-2); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .sw { width: 10px; height: 10px; border-radius: 3px; display: inline-block; flex: none; }
+  .sw.dot { border-radius: 50%; }
+  .figure svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .figure text { font-family: inherit; fill: var(--muted); font-size: 12px; }
+  .figure .val { fill: var(--ink); font-weight: 600; }
+  .figure .val .small { fill: var(--muted); font-weight: 400; }
+  .figure .lbl { fill: var(--ink-2); font-size: 13px; }
+  .grid line { stroke: var(--grid); stroke-width: 1; }
+  .axis line { stroke: var(--axis); stroke-width: 1; }
+  .xhair { stroke: var(--axis); stroke-width: 1; opacity: 0; pointer-events: none; }
+  .hit { fill: transparent; cursor: default; }
+  .hit:focus-visible { outline: none; }
+  .band.on .seg-rect, .row.on .bar { filter: brightness(1.08); }
+  .pub-springer { fill: var(--c1); } .pub-wiley { fill: var(--c2); } .pub-ieee { fill: var(--c3); }
+  .pub-elsevier { fill: var(--c4); } .pub-acm { fill: var(--c5); } .pub-other { fill: var(--c-other); }
+  .bar { fill: var(--accent); }
+  .p90 { fill: var(--ink-2); stroke: var(--surface); stroke-width: 2; }
+  .empty { color: var(--muted); padding: 32px 8px; text-align: center; font-size: 14px; }
+  .err { color: var(--ink-2); padding: 16px; border: 1px dashed var(--axis); border-radius: 10px; font-size: 14px; }
+  .err button { margin-left: 8px; }
+
+  table.data { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.data caption { text-align: left; color: var(--muted); padding-bottom: 6px; }
+  table.data th, table.data td { text-align: right; padding: 5px 8px; border-bottom: 1px solid var(--grid); font-variant-numeric: tabular-nums; }
+  table.data th:first-child, table.data td:first-child { text-align: left; }
+  table.data thead th { color: var(--ink-2); font-weight: 600; }
+  .scroll { max-height: 260px; overflow: auto; }
+
+  #tip { position: fixed; z-index: 50; pointer-events: none; background: var(--surface); color: var(--ink); border: 1px solid var(--axis);
+         border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,.18); padding: 8px 10px; font-size: 13px; opacity: 0; transition: opacity .08s; max-width: 260px; }
+  #tip.on { opacity: 1; }
+  #tip h4 { margin: 0 0 4px; font-size: 12px; color: var(--ink-2); font-weight: 600; }
+  #tip .r { display: flex; align-items: center; gap: 8px; padding: 1px 0; }
+  #tip .r i { width: 10px; height: 3px; border-radius: 2px; flex: none; }
+  #tip .r b { margin-left: auto; padding-left: 12px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  #tip .r span { color: var(--ink-2); }
+
+  /* ---- titles list ---- */
+  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+  .tabs button { border: 0; background: transparent; padding: 10px 14px; cursor: pointer; color: var(--ink-2); font-weight: 600; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .controls select, .controls input { background: var(--page); border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; min-width: 0; }
+  .controls input[type="search"] { flex: 1 1 220px; }
+  .count { font-size: 13px; color: var(--muted); margin: 4px 0 8px; }
+  ol.titles { list-style: none; margin: 0; padding: 0; }
+  ol.titles li { display: grid; grid-template-columns: 84px 1fr; gap: 4px 16px; padding: 12px 0; border-top: 1px solid var(--grid); }
+  .when { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; padding-top: 2px; }
+  .ttl { font-weight: 600; line-height: 1.35; }
+  .ttl a { color: var(--ink); text-decoration-color: var(--axis); }
+  .ttl a:hover { color: var(--accent-ink); }
+  .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 12px; margin-top: 4px; font-size: 13px; color: var(--ink-2); }
+  .meta .pub { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
+  .badge { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; background: var(--accent-wash); color: var(--accent-ink); }
+  .badge.upd { background: transparent; border: 1px solid var(--axis); color: var(--ink-2); }
+  .conf { margin-top: 2px; font-size: 13px; color: var(--muted); }
+  .more { margin-top: 12px; border: 1px solid var(--border); background: transparent; border-radius: 10px; padding: 8px 16px; cursor: pointer; }
+  .more:hover { background: var(--accent-wash); }
+
+  /* ---- about ---- */
+  .about { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .about h3 { margin: 0 0 8px; font-size: 15px; }
+  .about p, .about li { font-size: 14px; color: var(--ink-2); margin: 0 0 8px; }
+  .about ul { padding-left: 18px; margin: 0; }
+  footer { margin: 48px 0 32px; padding-top: 16px; border-top: 1px solid var(--border); font-size: 13px; color: var(--muted); }
+
+  @media (max-width: 900px) {
+    .kpis { grid-template-columns: repeat(2, 1fr); } .kpis .hero { grid-row: auto; }
+    .charts { grid-template-columns: 1fr; } .charts .wide { grid-column: auto; }
+    .about { grid-template-columns: 1fr; }
+    .topbar nav a:not(:last-child) { display: none; }
+  }
+  @media (max-width: 560px) {
+    .kpis { grid-template-columns: 1fr 1fr; gap: 12px; } .kpis .hero { grid-column: span 2; }
+    .kpis .card { padding: 16px; } .value { font-size: 26px; }
+    .hero .value { font-size: 48px; }
+    ol.titles li { grid-template-columns: 1fr; }
+    .topbar nav { display: none; } .theme-btn { margin-left: auto; }
+  }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition: none !important; } }
 </style>
 </head>
 <body>
+<header class="topbar">
+  <div class="wrap">
+    <a class="brand" href="#top"><span class="brand-mark" aria-hidden="true"><i></i></span>Publisher Title Tracker</a>
+    <nav aria-label="Sections">
+      <a href="#overview">Overview</a><a href="#charts">Charts</a><a href="#titles">Titles</a><a href="#about">About</a>
+    </nav>
+    <button class="theme-btn" id="theme" type="button" aria-label="Switch between light and dark mode">Dark mode</button>
+  </div>
+</header>
 
-<h1>Publisher Title Tracker</h1>
-<p class="sub">New and updated titles (proceedings, journal issues, books) from Springer, Elsevier,
-Wiley, IEEE and ACM, collected from CrossRef at regular intervals.</p>
+<main id="top" class="wrap">
+  <section class="intro">
+    <h1>What is new from five scientific publishers</h1>
+    <p>New proceedings volumes, journal issues and books from Springer, Elsevier, Wiley, IEEE and ACM, collected every night and shown here.</p>
+    <div class="status" id="status" aria-live="polite"></div>
+  </section>
 
-<nav>
-  <a href="#publishers">Publishers</a>
-  <a href="#new">New titles</a>
-  <a href="#browse">Browse and search</a>
-  <a href="#feeds">Feeds and API</a>
-</nav>
+  <div class="filters" role="group" aria-label="Period">
+    <span>Period</span>
+    <div class="seg" id="period">
+      <button type="button" data-days="7" aria-pressed="true">7 days</button>
+      <button type="button" data-days="30" aria-pressed="false">30 days</button>
+      <button type="button" data-days="90" aria-pressed="false">90 days</button>
+      <button type="button" data-days="0" aria-pressed="false">All time</button>
+    </div>
+  </div>
 
-<h2 id="publishers">Publishers</h2>
-<p class="note">Titles stored per publisher, and how many arrived in the chosen period.</p>
-<form onsubmit="loadPublishers(); return false;">
-  <label>New in the last
-    <select id="pubDays">
-      <option value="1">1 day</option>
-      <option value="7" selected>7 days</option>
-      <option value="30">30 days</option>
-    </select>
-  </label>
-  <button type="submit">Update</button>
-</form>
-<div id="publishersBox">Loading...</div>
+  <section id="overview" aria-label="Overview"><div class="kpis" id="kpis"><div class="card hero"><div class="label">New titles</div><div class="value">…</div></div></div></section>
 
-<h2 id="new">New titles</h2>
-<p class="note">Change events: a title is <b>added</b> when it is seen for the first time and
-<b>updated</b> when its metadata changes later.</p>
-<form onsubmit="loadEvents(); return false;">
-  <label>Publisher <select id="evPublisher"><option value="">All</option></select></label>
-  <label>Type <select id="evWorkType"></select></label>
-  <label>Event
-    <select id="evType">
-      <option value="">All</option>
-      <option value="title.added">Added</option>
-      <option value="title.updated">Updated</option>
-    </select>
-  </label>
-  <label>Period
-    <select id="evDays">
-      <option value="1">Last day</option>
-      <option value="7" selected>Last 7 days</option>
-      <option value="30">Last 30 days</option>
-      <option value="365">Last year</option>
-    </select>
-  </label>
-  <button type="submit">Show</button>
-</form>
-<div id="eventsBox">Loading...</div>
+  <h2 id="charts">How it looks over time</h2>
+  <p class="sub">Titles that were first reported in the chosen period. Titles loaded when the system started are stored but not counted as new.</p>
+  <section class="charts" aria-label="Charts">
+    <div class="card wide" id="c-arrivals"></div>
+    <div class="card" id="c-latency"></div>
+    <div class="card" id="c-countries"></div>
+  </section>
 
-<h2 id="browse">Browse and search</h2>
-<form onsubmit="searchPublications(); return false;">
-  <label>Publisher <select id="pPublisher"><option value="">All</option></select></label>
-  <label>Type <select id="pWorkType"></select></label>
-  <label>Year <input type="number" id="pYear" min="1970" max="2100" style="width:70px"></label>
-  <label>Title contains <input type="text" id="pQuery" style="width:180px"></label>
-  <label>Show
-    <select id="pLimit">
-      <option value="25">25</option>
-      <option value="50" selected>50</option>
-      <option value="100">100</option>
-      <option value="500">500</option>
-    </select>
-  </label>
-  <button type="submit">Search</button>
-</form>
-<div id="resultsBox">Use the form above to search.</div>
+  <h2 id="titles">Titles</h2>
+  <p class="sub">Every title links to its page at the publisher. Titles are listed newest first.</p>
+  <section class="card" aria-label="Titles">
+    <div class="tabs" role="tablist">
+      <button type="button" role="tab" id="tab-new" aria-selected="true" aria-controls="panel">New and updated</button>
+      <button type="button" role="tab" id="tab-all" aria-selected="false" aria-controls="panel">Search all titles</button>
+    </div>
+    <div class="controls">
+      <input type="search" id="q" placeholder="Search in titles" aria-label="Search in titles" autocomplete="off">
+      <select id="f-publisher" aria-label="Publisher"><option value="">All publishers</option></select>
+      <select id="f-type" aria-label="Type"><option value="">All types</option><option>Proceedings</option><option>Book</option><option>Journal issue</option></select>
+      <select id="f-kind" aria-label="Kind of change"><option value="new">New titles</option><option value="updated">Updated titles</option><option value="all">New and updated</option></select>
+    </div>
+    <div id="panel" role="tabpanel"><div class="count" id="count" aria-live="polite"></div><ol class="titles" id="list"></ol><button class="more" id="more" type="button" hidden>Show more</button></div>
+  </section>
 
-<h2 id="feeds">Feeds and API</h2>
-<p>Subscribe in a feed reader to get new titles without visiting this page.
-Add <code>?publisher=WILEY</code> (or SPRINGER, ELSEVIER, IEEE, ACM) to limit a feed to one publisher.</p>
-<ul>
-  <li><a href="/feed/events.atom">Atom feed of change events</a></li>
-  <li><a href="/feed.rss">RSS feed of newly added titles</a></li>
-</ul>
-<p>JSON endpoints:</p>
-<ul>
-  <li><code>/api/publishers</code> &ndash; overview per publisher</li>
-  <li><code>/api/events?since=YYYY-MM-DD&amp;publisher=&amp;work_type=&amp;type=title.added</code> &ndash; change events</li>
-  <li><code>/api/publications?publisher=&amp;type=&amp;year=&amp;query=&amp;limit=</code> &ndash; search</li>
-  <li><code>/api/publications/new?since=YYYY-MM-DD&amp;publisher=</code> &ndash; titles added since a date</li>
-</ul>
+  <h2 id="about">About this page</h2>
+  <section class="about">
+    <div class="card"><h3>What counts as new?</h3>
+      <p>A title is <b>new</b> when the system sees it for the first time after it started on <span id="since">11 October 2026</span>. A title is <b>updated</b> when its details changed later, for example when a conference date was added.</p>
+      <p>Titles that were already registered when the system started are stored, but they are not shown as new.</p></div>
+    <div class="card"><h3>Where the data comes from</h3>
+      <ul><li><b>Crossref</b>, the register of publications: all five publishers.</li>
+        <li><b>IEEE Xplore</b>: IEEE conferences and journals.</li>
+        <li><b>Springer Nature API</b>: Springer volumes, often before Crossref has them.</li></ul>
+      <p>The detection time is the time from Crossref registering a title to its first report here. It is limited by the nightly schedule.</p></div>
+    <div class="card"><h3>Use the data elsewhere</h3>
+      <ul><li><a href="/feed.rss">RSS feed</a> and <a href="/feed/events.atom">Atom feed</a></li>
+        <li><a href="/api">JSON API</a> with all endpoints</li></ul>
+      <p>Built as part of a master's thesis at the Technical University of Košice. Metadata from Crossref and the publishers' interfaces, for research use.</p></div>
+  </section>
+  <footer>Publisher Title Tracker · data is refreshed every night</footer>
+</main>
 
-<footer class="small">
-  Data source: CrossRef. &ldquo;New&rdquo; means newly registered in CrossRef, which can be later than the
-  publisher&rsquo;s own announcement.
-</footer>
+<div id="tip" role="status" aria-hidden="true"></div>
 
 <script>
-const API = '';   // same origin
-const WORK_TYPES = [
-  ['', 'All'], ['proceedings', 'Proceedings'], ['journal-issue', 'Journal issue'],
-  ['journal', 'Journal'], ['book', 'Book'], ['edited-book', 'Edited book'],
-  ['monograph', 'Monograph']
-];
+(() => {
+  'use strict';
+  const $ = (s, r = document) => r.querySelector(s);
+  const API = '/api/dashboard/';
+  const nf = new Intl.NumberFormat('en-GB');
+  const PUBS = ['Springer', 'Wiley', 'IEEE', 'Elsevier', 'ACM'];          // fixed order = fixed colours
+  const pubClass = n => PUBS.includes(n) ? 'pub-' + n.toLowerCase() : 'pub-other';
+  const pubVar = n => PUBS.includes(n) ? `var(--c${PUBS.indexOf(n) + 1})` : 'var(--c-other)';
+  const NS = 'http://www.w3.org/2000/svg';
 
-// Titles and names come from external metadata, so never insert them as HTML.
-function esc(v) {
-  return String(v === null || v === undefined ? '' : v)
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-function day(iso) { return iso ? String(iso).slice(0, 10) : ''; }
-function doiLink(doi, text) {
-  return doi ? `<a href="${API}/api/doi/${encodeURIComponent(doi)}" target="_blank" rel="noopener">${esc(text || doi)}</a>`
-             : esc(text);
-}
-async function getJSON(url) {
-  const r = await fetch(API + url);
-  const d = await r.json();
-  if (!r.ok) throw new Error(d.error || r.statusText);
-  return d;
-}
-function showError(boxId, e) {
-  document.getElementById(boxId).innerHTML = `<p class="error">Could not load data: ${esc(e.message)}</p>`;
-}
-function fillWorkTypes(id) {
-  document.getElementById(id).innerHTML =
-    WORK_TYPES.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
-}
-function sinceDate(days) {
-  return new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
-}
+  const state = { days: 7, tab: 'new', offset: 0, token: 0 };
 
-// ---- Publishers overview ----
-let publisherList = [];
-
-async function loadPublishers() {
-  const days = document.getElementById('pubDays').value;
-  try {
-    const d = await getJSON(`/api/publishers?days=${days}`);
-    publisherList = d.publishers;
-    fillPublisherSelects();
-    let html = `<table><tr><th>Publisher</th><th>Titles stored</th><th>New in last ${esc(days)} day(s)</th>
-                <th>By type</th><th>Last successful run (UTC)</th></tr>`;
-    d.publishers.forEach(p => {
-      const types = Object.entries(p.by_type || {})
-        .map(([t, n]) => `${esc(t)}: ${n.toLocaleString()}`).join(', ') || '-';
-      html += `<tr><td>${esc(p.name)}</td>
-        <td class="num">${(p.total || 0).toLocaleString()}</td>
-        <td class="num">${(p.new_in_window || 0).toLocaleString()}</td>
-        <td>${types}</td>
-        <td>${p.last_success_at ? esc(p.last_success_at.replace('T', ' ').slice(0, 16)) : 'not run yet'}</td></tr>`;
-    });
-    document.getElementById('publishersBox').innerHTML = html + '</table>';
-  } catch (e) { showError('publishersBox', e); }
-}
-
-function fillPublisherSelects() {
-  ['evPublisher', 'pPublisher'].forEach(id => {
-    const sel = document.getElementById(id);
-    const current = sel.value;
-    sel.innerHTML = '<option value="">All</option>' +
-      publisherList.map(p => `<option value="${esc(p.key)}">${esc(p.name)}</option>`).join('');
-    sel.value = current;
-  });
-}
-
-// ---- Change events ----
-async function loadEvents() {
-  const params = new URLSearchParams();
-  params.set('since', sinceDate(document.getElementById('evDays').value));
-  params.set('limit', '200');
-  const pub = document.getElementById('evPublisher').value;
-  const wt = document.getElementById('evWorkType').value;
-  const et = document.getElementById('evType').value;
-  if (pub) params.set('publisher', pub);
-  if (wt) params.set('work_type', wt);
-  if (et) params.set('type', et);
-  try {
-    const d = await getJSON('/api/events?' + params);
-    if (!d.results.length) {
-      document.getElementById('eventsBox').innerHTML = '<p>No events for this selection.</p>';
-      return;
+  /* ---------- small helpers (text is always inserted with textContent) ---------- */
+  function h(tag, attrs, ...kids) {
+    const e = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs || {})) {
+      if (v === false || v == null) continue;
+      if (k === 'class') e.className = v; else if (k === 'text') e.textContent = v; else e.setAttribute(k, v === true ? '' : v);
     }
-    let html = `<p class="small">${d.count} event(s)${d.count >= 200 ? ' (showing the latest 200)' : ''}</p>
-      <table><tr><th>Detected</th><th>Event</th><th>Publisher</th><th>Type</th><th>Title</th></tr>`;
-    d.results.forEach(ev => {
-      const title = (ev.payload && ev.payload.title) || ev.doi;
-      html += `<tr><td>${esc(day(ev.detected_at))}</td>
-        <td>${ev.event_type === 'title.added' ? 'added' : 'updated'}</td>
-        <td>${esc(ev.publisher || '')}</td>
-        <td>${esc(ev.work_type || '')}</td>
-        <td>${doiLink(ev.doi, title)}</td></tr>`;
-    });
-    document.getElementById('eventsBox').innerHTML = html + '</table>';
-  } catch (e) { showError('eventsBox', e); }
-}
+    kids.flat().forEach(c => c != null && e.append(c.nodeType ? c : document.createTextNode(c)));
+    return e;
+  }
+  function s(tag, attrs, ...kids) {
+    const e = document.createElementNS(NS, tag);
+    for (const [k, v] of Object.entries(attrs || {})) if (v != null) e.setAttribute(k, v);
+    kids.flat().forEach(c => c != null && e.append(c.nodeType ? c : document.createTextNode(c)));
+    return e;
+  }
+  const day = iso => new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' }).format(new Date(iso + 'T00:00:00Z'));
+  const dayYear = iso => new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(iso + 'T00:00:00Z'));
+  const stamp = iso => new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }).format(new Date(iso + 'Z'));
+  const hours = v => v == null ? '–' : Math.abs(v) < 1 ? Math.round(v * 60) + ' min' : Math.abs(v) < 10 ? v.toFixed(1) + ' h' : Math.round(v) + ' h';
+  const periodName = d => d ? `the last ${d} days` : 'all time';
+  const safeUrl = u => /^https?:\/\//i.test(u || '') ? u : null;
 
-// ---- Search ----
-async function searchPublications() {
-  const params = new URLSearchParams();
-  const f = { publisher: 'pPublisher', type: 'pWorkType', year: 'pYear',
-              query: 'pQuery', limit: 'pLimit' };
-  Object.entries(f).forEach(([k, id]) => {
-    const v = document.getElementById(id).value.trim();
-    if (v) params.set(k, v);
-  });
-  document.getElementById('resultsBox').textContent = 'Loading...';
-  try {
-    const d = await getJSON('/api/publications?' + params);
-    if (!d.results.length) {
-      document.getElementById('resultsBox').innerHTML = '<p>No titles found.</p>';
-      return;
+  async function getJSON(path, params) {
+    const url = API + path + (params ? '?' + new URLSearchParams(params) : '');
+    const r = await fetch(url);
+    const body = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(body.error || `The server answered ${r.status}`);
+    return body;
+  }
+
+  /* ---------- tooltip: one element, same content on hover and on keyboard focus ---------- */
+  const tip = $('#tip');
+  function showTip(evt, title, rows) {
+    tip.replaceChildren(h('h4', { text: title }), ...rows.map(r =>
+      h('div', { class: 'r' }, r.key ? h('i', { style: `background:${r.key}` }) : null, h('span', { text: r.label }), h('b', { text: r.value }))));
+    tip.classList.add('on'); tip.setAttribute('aria-hidden', 'false');
+    const box = evt.currentTarget.getBoundingClientRect();
+    const x = evt.clientX || box.left + box.width / 2, y = evt.clientY || box.top;
+    const w = tip.offsetWidth, hh = tip.offsetHeight;
+    tip.style.left = Math.max(8, Math.min(innerWidth - w - 8, x + 14)) + 'px';
+    tip.style.top = Math.max(8, Math.min(innerHeight - hh - 8, y - hh - 10 > 8 ? y - hh - 10 : y + 18)) + 'px';
+  }
+  const hideTip = () => { tip.classList.remove('on'); tip.setAttribute('aria-hidden', 'true'); };
+
+  /* ---------- chart card: title, optional legend, figure, and the table twin ---------- */
+  function card(el, title, subtitle, legend) {
+    const fig = h('div', { class: 'figure' });
+    const tbl = h('div', { class: 'scroll', hidden: true });
+    const btn = h('button', { class: 'tbl-btn', type: 'button', 'aria-pressed': 'false', text: 'Table view' });
+    btn.addEventListener('click', () => {
+      const on = btn.getAttribute('aria-pressed') !== 'true';
+      btn.setAttribute('aria-pressed', on); tbl.hidden = !on; fig.hidden = on;
+    });
+    el.replaceChildren(...[h('div', { class: 'chart-head' }, h('div', null, h('h3', { text: title }), h('p', { text: subtitle })), btn),
+      legend, fig, tbl].filter(Boolean));
+    return { fig, tbl };
+  }
+  function table(caption, head, body) {
+    return h('table', { class: 'data' }, h('caption', { text: caption }),
+      h('thead', null, h('tr', null, head.map(t => h('th', { scope: 'col', text: t })))),
+      h('tbody', null, body.map(r => h('tr', null, r.map(c => h('td', { text: String(c) }))))));
+  }
+  const legendOf = items => h('div', { class: 'legend' }, items.map(i => h('span', null, h('i', { class: 'sw' + (i.dot ? ' dot' : ''), style: `background:${i.color}` }), i.label)));
+  const empty = (el, text) => el.replaceChildren(h('div', { class: 'empty', text }));
+  function failed(el, err, retry) {
+    el.replaceChildren(h('div', { class: 'err' }, err.message, h('button', { type: 'button', class: 'tbl-btn', text: 'Try again' })));
+    $('button', el).addEventListener('click', retry);
+  }
+  function niceScale(max) {                                   // top value and step with at most ~4 intervals
+    for (const m of [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000]) if (max / m <= 4) return { step: m, top: Math.max(m, Math.ceil(max / m) * m) };
+    return { step: 10000, top: Math.ceil(max / 10000) * 10000 };
+  }
+  const roundTop = (x, y, w, hgt, r) => { r = Math.min(r, hgt, w / 2); return `M${x},${y + hgt}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + hgt}Z`; };
+
+  /* ---------- chart 1: stacked columns, new titles over time by publisher ---------- */
+  function drawArrivals(el, d) {
+    const pubs = PUBS.filter(p => d.publishers.includes(p)).concat(d.publishers.filter(p => !PUBS.includes(p)));
+    const { fig, tbl } = card(el, 'New titles over time',
+      `Per ${d.granularity} (${d.granularity === 'week' ? 'weeks start on Monday' : 'UTC days'}), by publisher, ${day(d.from)} to ${day(d.to)}`,
+      pubs.length > 1 ? legendOf(pubs.map(p => ({ label: p, color: pubVar(p) }))) : null);
+    const B = d.buckets, total = B.reduce((a, b) => a + b.total, 0);
+    tbl.replaceChildren(table('New titles per ' + d.granularity, [d.granularity === 'week' ? 'Week starting' : 'Day', ...pubs, 'Total'],
+      B.map(b => [day(b.start), ...pubs.map(p => b.values[p] || 0), b.total])));
+    if (!total) return empty(fig, 'No new titles in this period.');
+    const W = Math.max(320, el.clientWidth - 40), H = 250, m = { l: 36, r: 8, t: 10, b: 28 };
+    const pw = W - m.l - m.r, ph = H - m.t - m.b, sc = niceScale(Math.max(...B.map(b => b.total)));
+    const Y = v => m.t + ph - (v / sc.top) * ph, band = pw / B.length, bw = Math.min(24, band * 0.7);
+    const svg = s('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': `Stacked columns: ${total} new titles by publisher over time. A table view is available.` });
+    const grid = s('g', { class: 'grid' });
+    for (let v = 0; v <= sc.top; v += sc.step) {
+      grid.append(s('line', { x1: m.l, x2: W - m.r, y1: Y(v), y2: Y(v) }), s('text', { x: m.l - 8, y: Y(v) + 4, 'text-anchor': 'end' }, nf.format(v)));
     }
-    let html = `<p class="small">${d.count} title(s)</p>
-      <table><tr><th>Year</th><th>Publisher</th><th>Type</th><th>Title</th>
-      <th>Series / venue</th><th>Authors or editors</th></tr>`;
-    d.results.forEach(p => {
-      const names = (p.authors || []).slice(0, 3).map(a => a.name).join('; ') +
-                    ((p.authors || []).length > 3 ? ' et al.' : '');
-      const venue = p.event_name ? `${p.series || ''} (${p.event_name})` : (p.series || '');
-      html += `<tr><td>${esc(p.year || '')}</td><td>${esc(p.publisher || '')}</td>
-        <td>${esc(p.work_type || '')}</td><td>${doiLink(p.doi, p.title)}</td>
-        <td>${esc(venue)}</td><td>${esc(names)}</td></tr>`;
+    svg.append(grid);
+    const every = Math.max(1, Math.ceil(58 / band));
+    B.forEach((b, i) => {
+      const cx = m.l + band * i + band / 2, g = s('g', { class: 'band' });
+      let acc = 0, first = true;
+      const present = pubs.filter(p => b.values[p]);
+      present.forEach((p, k) => {
+        const v = b.values[p], y1 = Y(acc), y0 = Y(acc + v), top = k === present.length - 1;
+        const hgt = Math.max(1, y1 - y0 - (first ? 0 : 2));
+        const x = cx - bw / 2;
+        g.append(top ? s('path', { class: `seg-rect ${pubClass(p)}`, d: roundTop(x, y0, bw, hgt, 4) })
+                     : s('rect', { class: `seg-rect ${pubClass(p)}`, x, y: y0, width: bw, height: hgt }));
+        acc += v; first = false;
+      });
+      if (i % every === 0 || i === B.length - 1 && every === 1) svg.append(s('text', { x: cx, y: H - 8, 'text-anchor': 'middle' }, day(b.start)));
+      const xh = s('line', { class: 'xhair', x1: cx, x2: cx, y1: m.t, y2: m.t + ph });
+      const label = `${day(b.start)}${d.granularity === 'week' ? ' to ' + day(b.end) : ''}: ${b.total} new titles`;
+      const hit = s('rect', { class: 'hit', x: m.l + band * i, y: m.t, width: band, height: ph, tabindex: 0, 'aria-label': label });
+      const on = e => { xh.style.opacity = 1; g.classList.add('on');
+        showTip(e, d.granularity === 'week' ? `${day(b.start)} to ${day(b.end)}` : dayYear(b.start),
+          [...pubs.filter(p => b.values[p]).map(p => ({ key: pubVar(p), label: p, value: nf.format(b.values[p]) })), { label: 'Total', value: nf.format(b.total) }]); };
+      const off = () => { xh.style.opacity = 0; g.classList.remove('on'); hideTip(); };
+      ['pointermove', 'focus'].forEach(t => hit.addEventListener(t, on)); ['pointerleave', 'blur'].forEach(t => hit.addEventListener(t, off));
+      svg.append(g, xh, hit);
     });
-    document.getElementById('resultsBox').innerHTML = html + '</table>';
-  } catch (e) { showError('resultsBox', e); }
-}
+    svg.append(s('g', { class: 'axis' }, s('line', { x1: m.l, x2: W - m.r, y1: Y(0), y2: Y(0) })));
+    fig.replaceChildren(svg);
+  }
 
-// ---- Start ----
-fillWorkTypes('evWorkType');
-fillWorkTypes('pWorkType');
-loadPublishers().then(loadEvents);
+  /* ---------- charts 2 and 3: horizontal bars with the value at the tip ---------- */
+  function drawBars(el, o) {
+    const { fig, tbl } = card(el, o.title, o.subtitle, o.legend);
+    tbl.replaceChildren(table(o.title, o.head, o.rows.map(r => r.table)));
+    if (!o.rows.length) return empty(fig, o.empty);
+    const W = Math.max(280, el.clientWidth - 40), rowH = 30, m = { l: Math.min(150, Math.max(...o.rows.map(r => r.label.length)) * 7.2 + 12), r: o.padRight, t: 4 };
+    const H = m.t + rowH * o.rows.length + 4, pw = W - m.l - m.r, max = Math.max(...o.rows.map(r => Math.max(r.value, r.mark || 0))) || 1;
+    const X = v => m.l + Math.max(0, v) / max * pw;
+    const svg = s('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': o.title + '. A table view is available.' });
+    o.rows.forEach((r, i) => {
+      const y = m.t + rowH * i, cy = y + rowH / 2, g = s('g', { class: 'row' });
+      const w = Math.max(2, X(r.value) - m.l), bh = 16;
+      g.append(s('text', { class: 'lbl', x: m.l - 10, y: cy + 4, 'text-anchor': 'end' }, r.label));
+      g.append(s('path', { class: 'bar', d: `M${m.l},${cy - bh / 2}H${m.l + w - 4}Q${m.l + w},${cy - bh / 2} ${m.l + w},${cy - bh / 2 + 4}V${cy + bh / 2 - 4}Q${m.l + w},${cy + bh / 2} ${m.l + w - 4},${cy + bh / 2}H${m.l}Z` }));
+      let end = m.l + w;
+      if (r.mark != null) { g.append(s('circle', { class: 'p90', cx: X(r.mark), cy, r: 5 })); end = Math.max(end, X(r.mark) + 5); }
+      g.append(s('text', { class: 'val', x: end + 10, y: cy + 4 }, r.text, r.sub ? s('tspan', { class: 'small', dx: 6 }, r.sub) : null));
+      const hit = s('rect', { class: 'hit', x: 0, y, width: W, height: rowH, tabindex: 0, 'aria-label': r.aria });
+      const on = e => { g.classList.add('on'); showTip(e, r.label, r.tip); }, off = () => { g.classList.remove('on'); hideTip(); };
+      ['pointermove', 'focus'].forEach(t => hit.addEventListener(t, on)); ['pointerleave', 'blur'].forEach(t => hit.addEventListener(t, off));
+      svg.append(g, hit);
+    });
+    fig.replaceChildren(svg);
+  }
+
+  function drawLatency(el, d) {
+    const rows = d.publishers.filter(p => p.median_hours != null).map(p => ({
+      label: p.publisher, value: Math.max(0, p.median_hours), mark: p.p90_hours, text: hours(p.median_hours), sub: `90% within ${hours(p.p90_hours)}`,
+      aria: `${p.publisher}: median ${hours(p.median_hours)}, 90th percentile ${hours(p.p90_hours)}, ${p.titles} titles`,
+      tip: [{ label: 'Median', value: hours(p.median_hours) }, { label: '90th percentile', value: hours(p.p90_hours) },
+            { label: 'Slowest', value: hours(p.max_hours) }, { label: 'Titles', value: nf.format(p.titles) }],
+      table: [p.publisher, p.titles, hours(p.median_hours), hours(p.p90_hours), hours(p.max_hours)]
+    }));
+    drawBars(el, { title: 'How quickly titles are reported',
+      subtitle: 'Hours from Crossref registering a title to its first report here, per publisher',
+      legend: legendOf([{ label: 'Median', color: 'var(--accent)' }, { label: '90th percentile', color: 'var(--ink-2)', dot: true }]),
+      head: ['Publisher', 'Titles', 'Median', '90th percentile', 'Slowest'], rows, padRight: 150,
+      empty: 'No titles with a known registration time in this period.' });
+  }
+  function drawCountries(el, d) {
+    const rows = d.countries.map(c => ({ label: c.country, value: c.titles, text: nf.format(c.titles),
+      aria: `${c.country}: ${c.titles} new titles`, tip: [{ label: 'New titles', value: nf.format(c.titles) }], table: [c.country, c.titles] }));
+    drawBars(el, { title: 'Where the conferences are', subtitle: 'Countries with the most new titles that have a known conference location (top 10)',
+      head: ['Country', 'New titles'], rows, padRight: 44, empty: 'No new titles with a known location in this period.' });
+  }
+
+  /* ---------- overview tiles ---------- */
+  function drawKpis(d) {
+    const per = periodName(d.days);
+    let delta = null;
+    if (d.new_titles_previous != null) {
+      const diff = d.new_titles - d.new_titles_previous;
+      delta = h('div', { class: 'delta' + (diff > 0 ? ' up' : '') }, `${diff > 0 ? '▲ +' : diff < 0 ? '▼ −' : '= '}${nf.format(Math.abs(diff))} compared with the previous ${d.days} days`);
+    }
+    const ok = d.runs.total ? Math.round(100 * d.runs.successful / d.runs.total) : null;
+    $('#kpis').replaceChildren(
+      h('div', { class: 'card hero' }, h('div', { class: 'label', text: 'New titles' }), h('div', { class: 'value', text: nf.format(d.new_titles) }),
+        h('div', { class: 'note', text: `first reported in ${per}` }), delta),
+      h('div', { class: 'card' }, h('div', { class: 'label', text: 'Updated titles' }), h('div', { class: 'value', text: nf.format(d.updated_titles) }),
+        h('div', { class: 'note', text: 'details changed after the first report' })),
+      h('div', { class: 'card' }, h('div', { class: 'label', text: 'Typical detection time' }), h('div', { class: 'value', text: hours(d.latency.median_hours) }),
+        h('div', { class: 'note', text: d.latency.titles ? `median of ${nf.format(d.latency.titles)} titles; 9 in 10 within ${hours(d.latency.p90_hours)}` : 'no titles with a known registration time' })),
+      h('div', { class: 'card' }, h('div', { class: 'label', text: 'Titles stored' }), h('div', { class: 'value', text: nf.format(d.titles_stored) }),
+        h('div', { class: 'note', text: 'in the database, from five publishers' })),
+      h('div', { class: 'card' }, h('div', { class: 'label', text: 'Nightly runs' }), h('div', { class: 'value', text: ok == null ? '–' : ok + '%' }),
+        h('div', { class: 'note', text: ok == null ? 'no runs in this period' : `${nf.format(d.runs.successful)} of ${nf.format(d.runs.total)} runs finished fully in ${per}` })));
+    const parts = [];
+    if (d.last_success_at) parts.push(h('span', null, 'Last successful run ', h('b', { text: stamp(d.last_success_at) + ' UTC' })));
+    if (d.data_since) { parts.push(h('span', null, 'Collecting since ', h('b', { text: dayYear(d.data_since) }))); $('#since').textContent = dayYear(d.data_since); }
+    $('#status').replaceChildren(...parts);
+  }
+
+  /* ---------- titles list ---------- */
+  const dayOnly = iso => new Intl.DateTimeFormat('en-GB', { day: 'numeric', timeZone: 'UTC' }).format(new Date(iso + 'T00:00:00Z'));
+  const dayMonth = iso => new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', timeZone: 'UTC' }).format(new Date(iso + 'T00:00:00Z'));
+  function dateRange(a, b) {                       // 5 October 2026 | 5 to 9 October 2026 | 30 September to 2 October 2026
+    if (!b || b === a) return dayYear(a);
+    if (a.slice(0, 7) === b.slice(0, 7)) return `${dayOnly(a)} to ${dayYear(b)}`;
+    return a.slice(0, 4) === b.slice(0, 4) ? `${dayMonth(a)} to ${dayYear(b)}` : `${dayYear(a)} to ${dayYear(b)}`;
+  }
+  function conferenceLine(c) {
+    if (!c) return null;
+    const bits = [c.name, c.place];
+    if (c.start) bits.push(dateRange(c.start, c.end));
+    return h('div', { class: 'conf', text: 'Conference: ' + bits.filter(Boolean).join(' · ') });
+  }
+  function titleRow(r) {
+    const url = safeUrl(r.url), isNew = r.event === 'title.added';
+    const when = r.detected_at ? stamp(r.detected_at) : (r.year || '');
+    return h('li', null, h('div', { class: 'when', text: when }),
+      h('div', null,
+        h('div', { class: 'ttl' }, url ? h('a', { href: url, target: '_blank', rel: 'noopener noreferrer', text: r.title }) : r.title),
+        h('div', { class: 'meta' },
+          h('span', { class: 'pub' }, h('i', { class: 'sw', style: `background:${pubVar(r.publisher)}` }), r.publisher || 'Unknown'),
+          r.series ? h('span', { text: r.series }) : null, r.type_group ? h('span', { text: r.type_group }) : null,
+          r.event ? h('span', { class: 'badge' + (isNew ? '' : ' upd'), text: isNew ? 'New' : 'Updated' }) : null),
+        conferenceLine(r.conference)));
+  }
+  async function loadTitles(append) {
+    const token = ++state.token, list = $('#list');
+    if (!append) { state.offset = 0; }
+    const p = { limit: 25, offset: state.offset };
+    if ($('#q').value.trim()) p.q = $('#q').value.trim();
+    if ($('#f-publisher').value) p.publisher = $('#f-publisher').value;
+    if ($('#f-type').value) p.type_group = $('#f-type').value;
+    if (state.tab === 'new') { p.days = state.days; p.kind = $('#f-kind').value; }
+    list.classList.add('is-loading');
+    try {
+      const d = await getJSON(state.tab === 'new' ? 'titles' : 'search', p);
+      if (token !== state.token) return;
+      if (!append) list.replaceChildren();
+      d.results.forEach(r => list.append(titleRow(r)));
+      state.offset = d.offset + d.count;
+      $('#count').textContent = d.total ? `Showing ${nf.format(state.offset)} of ${nf.format(d.total)} titles` : 'No titles match.';
+      $('#more').hidden = state.offset >= d.total;
+    } catch (e) { if (token === state.token) { list.replaceChildren(h('li', null, '', h('div', { class: 'err', text: e.message }))); $('#more').hidden = true; $('#count').textContent = ''; } }
+    list.classList.remove('is-loading');
+  }
+  function setTab(tab) {
+    state.tab = tab;
+    $('#tab-new').setAttribute('aria-selected', tab === 'new'); $('#tab-all').setAttribute('aria-selected', tab === 'all');
+    $('#f-kind').hidden = tab !== 'new';
+    $('#q').placeholder = tab === 'new' ? 'Search in these titles' : 'Search all stored titles';
+    loadTitles(false);
+  }
+
+  /* ---------- page ---------- */
+  const SECTIONS = [
+    ['#c-arrivals', 'arrivals', drawArrivals], ['#c-latency', 'latency', drawLatency], ['#c-countries', 'countries', drawCountries]];
+  async function loadAll() {
+    const days = state.days;
+    const tasks = SECTIONS.map(async ([sel, path, draw]) => {
+      const el = $(sel); el.classList.add('is-loading');
+      try { draw(el, await getJSON(path, { days })); } catch (e) { failed(el, e, loadAll); }
+      el.classList.remove('is-loading');
+    });
+    $('#kpis').classList.add('is-loading');
+    tasks.push(getJSON('summary', { days }).then(drawKpis).catch(e => failed($('#kpis'), e, loadAll)).finally(() => $('#kpis').classList.remove('is-loading')));
+    tasks.push(loadTitles(false));
+    await Promise.all(tasks);
+  }
+  function setPeriod(days, push) {
+    state.days = days;
+    document.querySelectorAll('#period button').forEach(b => b.setAttribute('aria-pressed', Number(b.dataset.days) === days));
+    if (push) { const u = new URL(location.href); u.searchParams.set('days', days); history.replaceState(null, '', u); }
+    loadAll();
+  }
+
+  /* theme: the OS setting by default, the button overrides and is remembered */
+  function applyTheme(t) { if (t) document.documentElement.dataset.theme = t; else delete document.documentElement.dataset.theme;
+    const dark = (t || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')) === 'dark';
+    $('#theme').textContent = dark ? 'Light mode' : 'Dark mode'; }
+  let saved = null; try { saved = localStorage.getItem('theme'); } catch (e) { /* storage can be blocked */ }
+  applyTheme(saved);
+  $('#theme').addEventListener('click', () => {
+    const dark = (document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')) === 'dark';
+    const next = dark ? 'light' : 'dark'; applyTheme(next); try { localStorage.setItem('theme', next); } catch (e) { /* ignore */ }
+  });
+
+  PUBS.forEach(p => $('#f-publisher').append(h('option', { value: p, text: p })));
+  document.querySelectorAll('#period button').forEach(b => b.addEventListener('click', () => setPeriod(Number(b.dataset.days), true)));
+  $('#tab-new').addEventListener('click', () => setTab('new')); $('#tab-all').addEventListener('click', () => setTab('all'));
+  ['#f-publisher', '#f-type', '#f-kind'].forEach(sel => $(sel).addEventListener('change', () => loadTitles(false)));
+  let timer; $('#q').addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => loadTitles(false), 300); });
+  $('#more').addEventListener('click', () => loadTitles(true));
+  let resizeTimer; addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(loadAll, 250); });
+
+  const asked = Number(new URL(location.href).searchParams.get('days'));
+  state.days = [0, 7, 30, 90].includes(asked) && new URL(location.href).searchParams.has('days') ? asked : 7;
+  setPeriod(state.days, false);
+})();
 </script>
 </body>
 </html>

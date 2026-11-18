@@ -1,11 +1,17 @@
 services:
   - type: web
-    name: springer-publications-api
+    name: publisher-title-tracker
     runtime: python
+    plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn api_server:app
+    startCommand: gunicorn api_server:app --workers 2 --threads 4 --timeout 60
+    healthCheckPath: /health
     envVars:
       - key: DATABASE_URL
-        sync: false   # set manually in Render dashboard (keeps it secret)
+        sync: false   # paste the connection string of the READ-ONLY database user in the Render dashboard
+      - key: READ_ONLY
+        value: "1"    # public site: nothing is written, endpoints that call other websites are off
+      - key: RATE_LIMIT_PER_MINUTE
+        value: "300"  # per visitor; one page view makes about 7 requests
       - key: PYTHON_VERSION
         value: 3.11.0

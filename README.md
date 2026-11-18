@@ -90,10 +90,23 @@ The first incremental run of a publisher looks back 7 days; after that the
 watermark decides. Without `--incremental` it fetches the whole current year,
 which is a lot for Wiley, so try ACM first.
 
+The web page (`/`) shows the figures, three charts and the list of new titles; it reads only the
+read-only `/api/dashboard/...` endpoints, which are built on the star schema, so opening the page never
+changes the database. Light and dark mode follow the system setting.
+
 The API lives under `/api` (`/api/publishers`, `/api/events`, `/api/publications`,
 ...; the index at `/api` lists them), with feeds at `/feed.rss` and
 `/feed/events.atom`. Most endpoints accept `publisher=` (SPRINGER, ELSEVIER, WILEY,
 IEEE, ACM).
+
+## Putting the web page online (Render)
+
+`render.yaml` describes the site. Create a **read-only** database user in Neon (SELECT only) and give
+Render its connection string as `DATABASE_URL`; never the owner's. With `READ_ONLY=1` (set in the
+file) the site writes nothing, the two endpoints that call other websites are off, every visitor is
+limited to `RATE_LIMIT_PER_MINUTE` API requests (default 300) and security headers are sent. The
+nightly job keeps running on GitLab with the owner's connection string. Check the deployment at
+`/health`.
 
 ## Scheduling and tests
 

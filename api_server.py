@@ -26,6 +26,14 @@ from sqlalchemy import text
 app = Flask(__name__)
 CORS(app)
 
+# Read-only endpoints for the web page (/api/dashboard/...)
+from dashboard_api import dashboard
+app.register_blueprint(dashboard)
+
+# Public-site safeguards (read-only mode, rate limit, security headers); see public_mode.py
+import public_mode
+public_mode.install(app)
+
 DATA_DIR = Path("data")
 
 # ---------------------------------------------------------------------------
@@ -293,6 +301,12 @@ def api_index():
             '/feed.rss':                  'PUSH — RSS feed for subscription (params: publisher, series, type, limit)',
             '/api/events':                'Change events title.added / title.updated (params: since, type, publisher, series, work_type, limit)',
             '/feed/events.atom':          'Atom feed of change events (params: publisher, series, limit)',
+            '/api/dashboard/summary':     'Web page: headline numbers for a period (param: days)',
+            '/api/dashboard/arrivals':    'Web page: new titles per day or week, by publisher (param: days)',
+            '/api/dashboard/latency':     'Web page: hours from registration to first report, per publisher (param: days)',
+            '/api/dashboard/countries':   'Web page: countries with the most new titles (params: days, limit)',
+            '/api/dashboard/titles':      'Web page: new and updated titles, read-only (params: days, kind, publisher, type_group, q, limit, offset)',
+            '/api/dashboard/search':      'Web page: search all stored titles (params: q, publisher, type_group, year, limit, offset)',
             '/api/stats':                 'Overall database statistics',
             '/api/gold/stats':            'Gold layer: per-series aggregations',
             '/api/gold/trends':           'Gold layer: yearly publication trends (param: series)',
@@ -409,7 +423,9 @@ def health():
             session.close()
             return jsonify({'status': 'healthy', 'database': 'connected'})
         except Exception as e:
-            return jsonify({'status': 'unhealthy', 'database': str(e)}), 503
+            # Details (host names, driver messages) stay out of the public answer.
+            detail = 'unreachable' if public_mode.read_only() else str(e)
+            return jsonify({'status': 'unhealthy', 'database': detail}), 503
     return jsonify({'status': 'healthy', 'database': 'not configured (using local files)'})
 
 
@@ -899,12 +915,14 @@ def get_events():
                     d['payload'] = dict(d['payload'], title=decode_entities(d['payload']['title']))
                 results.append(d)
 
-            # Mark as delivered (best-effort; never fails the request).
-            now = datetime.utcnow()
-            for ev in events:
-                if ev.delivered_at is None:
-                    ev.delivered_at = now
-            session.commit()
+            # Mark as delivered (best-effort; never fails the request). Skipped on the public
+            # site, where the database user is read-only and a request must never write.
+            if not public_mode.read_only():
+                now = datetime.utcnow()
+                for ev in events:
+                    if ev.delivered_at is None:
+                        ev.delivered_at = now
+                session.commit()
         finally:
             session.close()
         return jsonify({
