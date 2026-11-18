@@ -99,3 +99,17 @@ def resolve_publisher(value: str, streams: list) -> Optional[Dict[str, Any]]:
         if v in (s['key'], s['name'].upper()):
             return s
     return None
+
+
+def publisher_of(stream: str, streams: list = None) -> str:
+    """
+    The clean publisher name ('Springer', 'Wiley', ...) of a stream, i.e. of the value
+    stored in publications.series / events.series. A stream that is not configured maps
+    to itself, so an unexpected value is never silently dropped or mislabelled.
+    """
+    if streams is None:
+        streams = load_publisher_streams()
+    for s in streams:
+        if stream in s['series']:
+            return s['name']
+    return stream

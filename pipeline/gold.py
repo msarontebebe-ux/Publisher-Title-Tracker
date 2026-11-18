@@ -1,10 +1,12 @@
 """
 Gold layer computation — runs after every silver upsert.
 
-Computes three aggregation tables in the gold schema:
+Computes the aggregation tables in the gold schema:
   gold.series_stats    — per-series totals and averages
   gold.yearly_trends   — publication counts per year per series
   gold.top_authors     — most published authors per series
+  gold.dim_publisher   — publisher dimension (publisher > imprint)
+  gold.publisher_map   — (stream, raw publisher name) -> publisher_key
 """
 
 from datetime import datetime
@@ -141,6 +143,36 @@ def compute_top_authors(session, series_filter: str = None, top_n: int = 50):
         seen[row.series] += 1
 
 
+def compute_dim_publisher(session) -> int:
+    """
+    Keep the publisher dimension complete: every (stream, raw publisher name) pair found
+    in publications or events gets a clean publisher (from the stream, see
+    pipeline.config.publisher_of) and an imprint (the raw name). Only adds; never changes
+    or removes, so it is safe to run after every load. Returns how many pairs were new.
+    """
+    from pipeline.config import load_publisher_streams, publisher_of
+
+    streams = load_publisher_streams()
+    pairs = session.execute(text("""
+        SELECT series, publisher FROM publications WHERE series IS NOT NULL AND publisher IS NOT NULL
+        UNION
+        SELECT series, publisher FROM events WHERE series IS NOT NULL AND publisher IS NOT NULL
+    """)).fetchall()
+
+    added = 0
+    for series, raw in pairs:
+        key = session.execute(text("""
+            INSERT INTO gold.dim_publisher (publisher, imprint) VALUES (:p, :i)
+            ON CONFLICT (publisher, imprint) DO UPDATE SET imprint = EXCLUDED.imprint
+            RETURNING publisher_key
+        """), {'p': publisher_of(series, streams), 'i': raw}).scalar()
+        added += session.execute(text("""
+            INSERT INTO gold.publisher_map (series, raw_publisher, publisher_key)
+            VALUES (:s, :r, :k) ON CONFLICT (series, raw_publisher) DO NOTHING
+        """), {'s': series, 'r': raw, 'k': key}).rowcount
+    return added
+
+
 def compute_quality_metrics(session, series_filter: str = None):
     """
     Compute per-series data quality percentages and write to quality_metrics.
@@ -249,6 +281,7 @@ def refresh_gold(series_filter: str = None):
         compute_yearly_trends(session,    series_filter)
         compute_top_authors(session,      series_filter)
         compute_quality_metrics(session,  series_filter)
+        compute_dim_publisher(session)
         pruned = prune_orphans(session)
         session.commit()
         if pruned:

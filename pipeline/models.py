@@ -423,3 +423,27 @@ class GoldTopAuthor(Base):
             'author_name':       self.author_name,
             'publication_count': self.publication_count,
         }
+
+
+class GoldDimPublisher(Base):
+    """
+    Publisher dimension, two levels: publisher (5 values: Springer, Elsevier, Wiley, IEEE,
+    ACM) and imprint (the name as CrossRef reports it, e.g. 'Springer Nature Switzerland').
+    """
+    __tablename__ = 'dim_publisher'
+    __table_args__ = (UniqueConstraint('publisher', 'imprint', name='uq_dim_publisher'),
+                      {'schema': 'gold'})
+
+    publisher_key = Column(Integer, primary_key=True, autoincrement=True)
+    publisher     = Column(String(100), nullable=False, index=True)
+    imprint       = Column(String(255), nullable=False)
+
+
+class GoldPublisherMap(Base):
+    """Which publisher_key a (stream, raw publisher name) pair belongs to."""
+    __tablename__ = 'publisher_map'
+    __table_args__ = {'schema': 'gold'}
+
+    series        = Column(String(255), primary_key=True)      # publications.series / events.series
+    raw_publisher = Column(String(255), primary_key=True)      # publications.publisher / events.publisher
+    publisher_key = Column(Integer, ForeignKey('gold.dim_publisher.publisher_key'), nullable=False)
