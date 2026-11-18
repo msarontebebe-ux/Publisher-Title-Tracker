@@ -42,6 +42,20 @@ def test_unparseable_dates_return_none(text):
     assert parse_conference_dates(text) is None
 
 
+@pytest.mark.parametrize('papers', [
+    ['10.30420/456789012'],                       # one dot: the stem would be just '10'
+    ['10.30420/456789012', '10.30420/456789013'],
+    ['not a doi.1'], [], [None, ''],
+])
+def test_proceedings_doi_rejects_stems_that_are_not_dois(papers):
+    assert proceedings_doi(papers) is None
+
+
+def test_proceedings_doi_keeps_other_publishers_prefixes():
+    assert proceedings_doi(['10.23919/eumc69230.2026.11746901']) == '10.23919/eumc69230.2026'
+    assert proceedings_doi(['10.1049/icp.2026.1234']) == '10.1049/icp.2026'
+
+
 def test_proceedings_doi_matches_crossref_style():
     assert proceedings_doi(['10.1109/ICMEW69720.2026.11720727',
                             '10.1109/ICMEW69720.2026.11720696']) == '10.1109/icmew69720.2026'
@@ -239,3 +253,23 @@ class TestDbQuota:
         from pipeline.api_quota import DbUsage
         DbUsage().increment('ieee-xplore', date(2026, 1, 1))
         assert DbUsage().get('ieee-xplore', date(2026, 1, 2)) == 0
+
+
+def test_conferences_without_a_usable_doi_get_their_own_identifier_and_never_collide():
+    """The PCIM case: one-dot paper DOIs used to give the stem '10' for every conference."""
+    def paper(pn, doi, title):
+        return {'publication_number': pn, 'doi': doi, 'publication_title': title,
+                'publication_year': '2026', 'conference_dates': '5-9 July 2026'}
+
+    pubs = make()._proceedings([
+        paper(11732832, '10.30420/456789012', 'PCIM Conference 2026'),
+        paper(11732832, '10.30420/456789013', 'PCIM Conference 2026'),
+        paper(11999999, '10.30420/999999991', 'Another Conference 2026'),
+        paper(11000001, '10.1109/ICMEW69720.2026.11720727', 'A normal IEEE conference'),
+    ])
+    ids = {p.title: p.doi for p in pubs}
+    assert ids == {'PCIM Conference 2026': 'ieee:conf:11732832',
+                   'Another Conference 2026': 'ieee:conf:11999999',
+                   'A normal IEEE conference': '10.1109/icmew69720.2026'}
+    assert len({p.doi for p in pubs}) == 3
+    assert all(p.doi != '10' for p in pubs)

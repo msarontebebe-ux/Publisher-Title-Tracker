@@ -7,7 +7,8 @@ record per proceedings volume (or per journal issue). So papers are grouped:
   * conference papers  -> grouped by `publication_number`; the proceedings DOI is
     the paper DOI minus its last segment (10.1109/ICMEW69720.2026.11720727 ->
     10.1109/icmew69720.2026), which is exactly the DOI CrossRef registers for the
-    volume, so IEEE titles are not duplicated across sources;
+    volume, so IEEE titles are not duplicated across sources. When that stem is not a
+    valid DOI, the identifier is 'ieee:conf:<publication_number>';
   * journal papers     -> grouped by (`publication_number`, `is_number`) = one issue.
     CrossRef holds no DOI for IEEE issues, so the identifier is 'ieee:issue:<pn>:<is>'.
 
@@ -84,10 +85,20 @@ def parse_conference_dates(text: Optional[str]) -> Optional[Tuple[str, str]]:
     return None
 
 
+_DOI_SHAPE = re.compile(r'^10\.\d{4,9}/\S+$')
+
+
 def proceedings_doi(paper_dois: List[str]) -> Optional[str]:
-    """Volume DOI = paper DOI minus its last segment, lower-cased (CrossRef style)."""
+    """
+    Volume DOI = paper DOI minus its last segment, lower-cased (CrossRef style).
+
+    A stem that is not shaped like a DOI is rejected. A paper DOI with a single dot
+    (10.30420/456789012) would otherwise give the stem '10', shared by every such
+    conference, so one title would hide another. None means: use a made-up id.
+    """
     stems = Counter(d.rpartition('.')[0].lower() for d in paper_dois if d and '.' in d)
-    return stems.most_common(1)[0][0] if stems else None
+    valid = Counter({stem: n for stem, n in stems.items() if _DOI_SHAPE.match(stem)})
+    return valid.most_common(1)[0][0] if valid else None
 
 
 def _int(value: Any) -> Optional[int]:
@@ -164,9 +175,9 @@ class IeeeXploreCollector(Collector):
                 groups.setdefault(str(p['publication_number']), []).append(p)
         out = []
         for pn, items in groups.items():
-            doi = proceedings_doi([i['doi'] for i in items])
-            if not doi:
-                continue
+            # A conference without a usable volume DOI gets an identifier of its own,
+            # like a journal issue, so it is still tracked and never merged with another.
+            doi = proceedings_doi([i['doi'] for i in items]) or f'ieee:conf:{pn}'
             first = items[0]
             name = first.get('publication_title') or doi
             dates = parse_conference_dates(first.get('conference_dates'))
