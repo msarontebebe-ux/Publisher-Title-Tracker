@@ -1037,4 +1037,5 @@ if __name__ == '__main__':
     print("  GET /api/gold/authors?series=LNCS&limit=10")
     print("=" * 60 + "\n")
     port = int(os.getenv('PORT', 5000))
-    app.run(debug=False, host='0.0.0.0', port=port)
+    # local use only by default; set HOST=0.0.0.0 on purpose to expose it (there is no login)
+    app.run(debug=False, host=os.getenv('HOST', '127.0.0.1'), port=port)
