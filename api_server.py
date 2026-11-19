@@ -288,11 +288,7 @@ def home():
 
 @app.route('/api')
 def api_index():
-    return jsonify({
-        'name':    'Publisher Title Tracker API',
-        'version': '2.0',
-        'backend': 'database' if _db_available() else 'local-files',
-        'endpoints': {
+    endpoints = {
             '/api/publishers':            'Tracked publishers with counts, work types and last successful run',
             '/api/series':                'All series with publication counts',
             '/api/publications':          'Search publications (params: publisher, series, type, year, query, limit)',
@@ -312,7 +308,12 @@ def api_index():
             '/api/gold/trends':           'Gold layer: yearly publication trends (param: series)',
             '/api/gold/authors':          'Gold layer: top authors (params: series, limit)',
             '/health':                    'Health check',
-        },
+    }
+    return jsonify({
+        'name':    'Publisher Title Tracker API',
+        'version': '2.0',
+        'backend': 'database' if _db_available() else 'local-files',
+        'endpoints': endpoints,
     })
 
 
@@ -820,7 +821,7 @@ def rss_feed():
         return str(e), 500
 
     feed_label = (series or publisher or '').upper()
-    feed_title = f'New Publications — {feed_label}' if feed_label else 'New Publications'
+    feed_title = f'Publisher Title Tracker: new titles ({feed_label})' if feed_label else 'Publisher Title Tracker: new titles'
     xml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
   <channel>
@@ -997,7 +998,7 @@ def events_atom_feed():
         return str(e), 500
 
     feed_label = (series or publisher or '').upper()
-    feed_title = f'Title Events — {feed_label}' if feed_label else 'Title Events'
+    feed_title = f'Publisher Title Tracker: title events ({feed_label})' if feed_label else 'Publisher Title Tracker: title events'
     xml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
   <title>{xml_escape(feed_title)}</title>

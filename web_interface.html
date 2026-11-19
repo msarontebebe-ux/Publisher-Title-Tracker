@@ -58,12 +58,12 @@
   .theme-btn:hover { background: var(--accent-wash); }
 
   /* ---- intro and period filter ---- */
-  .intro { padding: 40px 0 8px; }
-  .intro h1 { margin: 0 0 8px; font-size: clamp(26px, 4vw, 36px); line-height: 1.15; letter-spacing: -.02em; font-weight: 700; }
+  .intro { padding: 28px 0 4px; }
+  .intro h1 { margin: 0 0 8px; font-size: clamp(24px, 3.4vw, 32px); line-height: 1.15; letter-spacing: -.02em; font-weight: 700; }
   .intro p { margin: 0; max-width: 62ch; color: var(--ink-2); font-size: 16px; }
   .status { margin-top: 12px; font-size: 13px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 16px; }
   .status b { color: var(--ink-2); font-weight: 600; }
-  .filters { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 24px 0 16px; }
+  .filters { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 16px 0 12px; }
   .filters > span { font-size: 13px; color: var(--ink-2); font-weight: 600; }
   .seg { display: inline-flex; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 3px; }
   .seg button { border: 0; background: transparent; padding: 6px 14px; border-radius: 8px; cursor: pointer; color: var(--ink-2); font-size: 14px; }
@@ -73,11 +73,13 @@
   /* ---- cards and KPI tiles ---- */
   .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); padding: 20px; transition: opacity .15s; }
   .is-loading { opacity: .55; }
-  .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
-  .kpis .hero { grid-column: span 2; grid-row: span 2; display: flex; flex-direction: column; justify-content: center; }
+  .kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+  .kpis .card { padding: 14px 16px; }
   .label { font-size: 13px; color: var(--ink-2); font-weight: 600; }
   .value { font-size: 30px; font-weight: 650; letter-spacing: -.02em; line-height: 1.15; margin-top: 4px; }
-  .hero .value { font-size: 56px; letter-spacing: -.03em; line-height: 1.05; }
+  .hero .value { font-size: 36px; letter-spacing: -.03em; line-height: 1.05; }
+  .hero { border-color: var(--accent); }
+  h2.first { margin-top: 28px; }
   .note { font-size: 13px; color: var(--muted); margin-top: 6px; }
   .delta { font-size: 13px; margin-top: 6px; color: var(--ink-2); }
   .delta.up { color: var(--good); font-weight: 600; }
@@ -154,15 +156,25 @@
   .more { margin-top: 12px; border: 1px solid var(--border); background: transparent; border-radius: 10px; padding: 8px 16px; cursor: pointer; }
   .more:hover { background: var(--accent-wash); }
 
+  /* ---- subscribe ---- */
+  .feeds { list-style: none; margin: 0; padding: 0; }
+  .feeds li { display: grid; grid-template-columns: 110px 1fr auto auto; align-items: center; gap: 8px 10px; padding: 8px 0; border-top: 1px solid var(--grid); }
+  .feeds li:first-child { border-top: 0; }
+  .feeds .who { font-weight: 600; display: inline-flex; align-items: center; gap: 8px; }
+  .feeds input { background: var(--page); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; min-width: 0; font-size: 13px; color: var(--ink-2); }
+  .feeds button { border: 1px solid var(--border); background: transparent; border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: 13px; min-width: 96px; }
+  .feeds button:hover { background: var(--accent-wash); }
+  .feeds a { font-size: 13px; }
+
   /* ---- about ---- */
-  .about { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .about { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; align-items: start; }
   .about h3 { margin: 0 0 8px; font-size: 15px; }
   .about p, .about li { font-size: 14px; color: var(--ink-2); margin: 0 0 8px; }
   .about ul { padding-left: 18px; margin: 0; }
   footer { margin: 48px 0 32px; padding-top: 16px; border-top: 1px solid var(--border); font-size: 13px; color: var(--muted); }
 
   @media (max-width: 900px) {
-    .kpis { grid-template-columns: repeat(2, 1fr); } .kpis .hero { grid-row: auto; }
+    .kpis { grid-template-columns: repeat(2, 1fr); } .kpis .hero { grid-column: span 2; }
     .charts { grid-template-columns: 1fr; } .charts .wide { grid-column: auto; }
     .about { grid-template-columns: 1fr; }
     .topbar nav a:not(:last-child) { display: none; }
@@ -170,8 +182,10 @@
   @media (max-width: 560px) {
     .kpis { grid-template-columns: 1fr 1fr; gap: 12px; } .kpis .hero { grid-column: span 2; }
     .kpis .card { padding: 16px; } .value { font-size: 26px; }
-    .hero .value { font-size: 48px; }
+    .hero .value { font-size: 40px; }
+    .kpis .card:not(.hero) .note { display: none; }
     ol.titles li { grid-template-columns: 1fr; }
+    .feeds li { grid-template-columns: 1fr auto; } .feeds .who { grid-column: 1 / -1; } .feeds a { display: none; }
     .topbar nav { display: none; } .theme-btn { margin-left: auto; }
   }
   @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition: none !important; } }
@@ -182,7 +196,7 @@
   <div class="wrap">
     <a class="brand" href="#top"><span class="brand-mark" aria-hidden="true"><i></i></span>Publisher Title Tracker</a>
     <nav aria-label="Sections">
-      <a href="#overview">Overview</a><a href="#charts">Charts</a><a href="#titles">Titles</a><a href="#about">About</a>
+      <a href="#titles">Titles</a><a href="#charts">Trends</a><a href="#subscribe">Subscribe</a><a href="#about">About</a>
     </nav>
     <button class="theme-btn" id="theme" type="button" aria-label="Switch between light and dark mode">Dark mode</button>
   </div>
@@ -190,7 +204,7 @@
 
 <main id="top" class="wrap">
   <section class="intro">
-    <h1>What is new from five scientific publishers</h1>
+    <h1>What is new from five scientific publishers?</h1>
     <p>New proceedings volumes, journal issues and books from Springer, Elsevier, Wiley, IEEE and ACM, collected every night and shown here.</p>
     <div class="status" id="status" aria-live="polite"></div>
   </section>
@@ -207,16 +221,8 @@
 
   <section id="overview" aria-label="Overview"><div class="kpis" id="kpis"><div class="card hero"><div class="label">New titles</div><div class="value">…</div></div></div></section>
 
-  <h2 id="charts">How it looks over time</h2>
-  <p class="sub">Titles that were first reported in the chosen period. Titles loaded when the system started are stored but not counted as new.</p>
-  <section class="charts" aria-label="Charts">
-    <div class="card wide" id="c-arrivals"></div>
-    <div class="card" id="c-latency"></div>
-    <div class="card" id="c-countries"></div>
-  </section>
-
-  <h2 id="titles">Titles</h2>
-  <p class="sub">Every title links to its page at the publisher. Titles are listed newest first.</p>
+  <h2 id="titles" class="first">Find a title</h2>
+  <p class="sub">Every title links to its page at the publisher. Newest first. Use the search and filters to narrow the list.</p>
   <section class="card" aria-label="Titles">
     <div class="tabs" role="tablist">
       <button type="button" role="tab" id="tab-new" aria-selected="true" aria-controls="panel">New and updated</button>
@@ -231,6 +237,21 @@
     <div id="panel" role="tabpanel"><div class="count" id="count" aria-live="polite"></div><ol class="titles" id="list"></ol><button class="more" id="more" type="button" hidden>Show more</button></div>
   </section>
 
+  <h2 id="charts">Trends</h2>
+  <p class="sub">Titles that were first reported in the chosen period. Titles loaded when the system started are stored but not counted as new.</p>
+  <section class="charts" aria-label="Charts">
+    <div class="card wide" id="c-arrivals"></div>
+    <div class="card" id="c-latency"></div>
+    <div class="card" id="c-countries"></div>
+  </section>
+
+  <h2 id="subscribe">Get new titles automatically</h2>
+  <p class="sub">Add one of these addresses to a feed reader (for example Feedly, Inoreader or Thunderbird). The reader checks it for you and shows new titles, so you do not need to open this page. No account is needed.</p>
+  <section class="card" aria-label="Subscribe">
+    <ul class="feeds" id="feeds"></ul>
+    <p class="note">How to: click <b>Copy link</b>, open your feed reader, choose "Add feed" or "Subscribe", and paste the address.</p>
+  </section>
+
   <h2 id="about">About this page</h2>
   <section class="about">
     <div class="card"><h3>What counts as new?</h3>
@@ -241,9 +262,9 @@
         <li><b>IEEE Xplore</b>: IEEE conferences and journals.</li>
         <li><b>Springer Nature API</b>: Springer volumes, often before Crossref has them.</li></ul>
       <p>The detection time is the time from Crossref registering a title to its first report here. It is limited by the nightly schedule.</p></div>
-    <div class="card"><h3>Use the data elsewhere</h3>
-      <ul><li><a href="/feed.rss">RSS feed</a> and <a href="/feed/events.atom">Atom feed</a></li>
-        <li><a href="/api">JSON API</a> with all endpoints</li></ul>
+    <div class="card"><h3>For developers</h3>
+      <ul><li><a href="/feed/events.atom">Atom feed</a> of every change event (new and updated titles).</li>
+        <li><a href="/api">JSON API</a>: the data behind this page, for scripts and your own charts.</li></ul>
       <p>Built as part of a master's thesis at the Technical University of Košice. Metadata from Crossref and the publishers' interfaces, for research use.</p></div>
   </section>
   <footer>Publisher Title Tracker · data is refreshed every night</footer>
@@ -383,7 +404,7 @@
       svg.append(g, xh, hit);
     });
     svg.append(s('g', { class: 'axis' }, s('line', { x1: m.l, x2: W - m.r, y1: Y(0), y2: Y(0) })));
-    fig.replaceChildren(svg);
+    fig.replaceChildren(svg, d.granularity === 'day' && B.some(b => b.total <= 2) ? h('p', { class: 'note', text: 'Days with very few titles are normal: publishers do not release evenly.' }) : null);
   }
 
   /* ---------- charts 2 and 3: horizontal bars with the value at the tip ---------- */
@@ -399,10 +420,10 @@
       const y = m.t + rowH * i, cy = y + rowH / 2, g = s('g', { class: 'row' });
       const w = Math.max(2, X(r.value) - m.l), bh = 16;
       g.append(s('text', { class: 'lbl', x: m.l - 10, y: cy + 4, 'text-anchor': 'end' }, r.label));
-      g.append(s('path', { class: 'bar', d: `M${m.l},${cy - bh / 2}H${m.l + w - 4}Q${m.l + w},${cy - bh / 2} ${m.l + w},${cy - bh / 2 + 4}V${cy + bh / 2 - 4}Q${m.l + w},${cy + bh / 2} ${m.l + w - 4},${cy + bh / 2}H${m.l}Z` }));
+      if (!r.none) g.append(s('path', { class: 'bar', d: `M${m.l},${cy - bh / 2}H${m.l + w - 4}Q${m.l + w},${cy - bh / 2} ${m.l + w},${cy - bh / 2 + 4}V${cy + bh / 2 - 4}Q${m.l + w},${cy + bh / 2} ${m.l + w - 4},${cy + bh / 2}H${m.l}Z` }));
       let end = m.l + w;
       if (r.mark != null) { g.append(s('circle', { class: 'p90', cx: X(r.mark), cy, r: 5 })); end = Math.max(end, X(r.mark) + 5); }
-      g.append(s('text', { class: 'val', x: end + 10, y: cy + 4 }, r.text, r.sub ? s('tspan', { class: 'small', dx: 6 }, r.sub) : null));
+      g.append(s('text', { class: r.none ? 'lbl' : 'val', x: end + 10, y: cy + 4 }, r.text, r.sub ? s('tspan', { class: 'small', dx: 6 }, r.sub) : null));
       const hit = s('rect', { class: 'hit', x: 0, y, width: W, height: rowH, tabindex: 0, 'aria-label': r.aria });
       const on = e => { g.classList.add('on'); showTip(e, r.label, r.tip); }, off = () => { g.classList.remove('on'); hideTip(); };
       ['pointermove', 'focus'].forEach(t => hit.addEventListener(t, on)); ['pointerleave', 'blur'].forEach(t => hit.addEventListener(t, off));
@@ -412,17 +433,20 @@
   }
 
   function drawLatency(el, d) {
-    const rows = d.publishers.filter(p => p.median_hours != null).map(p => ({
-      label: p.publisher, value: Math.max(0, p.median_hours), mark: p.p90_hours, text: hours(p.median_hours), sub: `90% within ${hours(p.p90_hours)}`,
-      aria: `${p.publisher}: median ${hours(p.median_hours)}, 90th percentile ${hours(p.p90_hours)}, ${p.titles} titles`,
-      tip: [{ label: 'Median', value: hours(p.median_hours) }, { label: '90th percentile', value: hours(p.p90_hours) },
+    const have = d.publishers.filter(p => p.median_hours != null);
+    const rows = have.map(p => ({
+      label: p.publisher, value: Math.max(0, p.median_hours), text: hours(p.median_hours),
+      aria: `${p.publisher}: typical ${hours(p.median_hours)}, 9 in 10 within ${hours(p.p90_hours)}, ${p.titles} titles`,
+      tip: [{ label: 'Typical (median)', value: hours(p.median_hours) }, { label: '9 in 10 within', value: hours(p.p90_hours) },
             { label: 'Slowest', value: hours(p.max_hours) }, { label: 'Titles', value: nf.format(p.titles) }],
       table: [p.publisher, p.titles, hours(p.median_hours), hours(p.p90_hours), hours(p.max_hours)]
     }));
+    if (rows.length) PUBS.filter(n => !have.some(p => p.publisher === n)).forEach(n => rows.push({
+      label: n, value: 0, none: true, text: 'no data in this period', aria: `${n}: no data in this period`,
+      tip: [{ label: 'Titles with a known registration time', value: '0' }], table: [n, 0, '–', '–', '–'] }));
     drawBars(el, { title: 'How quickly titles are reported',
-      subtitle: 'Hours from Crossref registering a title to its first report here, per publisher',
-      legend: legendOf([{ label: 'Median', color: 'var(--accent)' }, { label: '90th percentile', color: 'var(--ink-2)', dot: true }]),
-      head: ['Publisher', 'Titles', 'Median', '90th percentile', 'Slowest'], rows, padRight: 150,
+      subtitle: 'Typical time (median) from Crossref registering a title to its first report here',
+      head: ['Publisher', 'Titles', 'Typical (median)', '9 in 10 within', 'Slowest'], rows, padRight: 150,
       empty: 'No titles with a known registration time in this period.' });
   }
   function drawCountries(el, d) {
@@ -545,6 +569,21 @@
     const next = dark ? 'light' : 'dark'; applyTheme(next); try { localStorage.setItem('theme', next); } catch (e) { /* ignore */ }
   });
 
+  /* subscribe block: one feed address per publisher, built from this page's own address */
+  [['All publishers', ''], ...PUBS.map(p => [p, p])].forEach(([name, pub]) => {
+    const url = location.origin + '/feed.rss' + (pub ? '?publisher=' + encodeURIComponent(pub) : '');
+    const input = h('input', { type: 'text', readonly: true, value: url, 'aria-label': 'Feed address for ' + name });
+    const btn = h('button', { type: 'button', text: 'Copy link', 'aria-label': 'Copy the feed address for ' + name });
+    btn.addEventListener('click', async () => {
+      let ok = false;
+      try { await navigator.clipboard.writeText(url); ok = true; } catch (e) { /* clipboard blocked: fall back to selecting */ }
+      if (!ok) { input.focus(); input.select(); try { ok = document.execCommand('copy'); } catch (e) { /* ignore */ } }
+      btn.textContent = ok ? 'Copied' : 'Press Ctrl+C'; setTimeout(() => { btn.textContent = 'Copy link'; }, 1800);
+    });
+    $('#feeds').append(h('li', null,
+      h('span', { class: 'who' }, pub ? h('span', { class: 'sw', style: `background:${pubVar(pub)}` }) : null, name),
+      input, btn, h('a', { href: url, target: '_blank', rel: 'noopener', text: 'Open' })));
+  });
   PUBS.forEach(p => $('#f-publisher').append(h('option', { value: p, text: p })));
   document.querySelectorAll('#period button').forEach(b => b.addEventListener('click', () => setPeriod(Number(b.dataset.days), true)));
   $('#tab-new').addEventListener('click', () => setTab('new')); $('#tab-all').addEventListener('click', () => setTab('all'));
